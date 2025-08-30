@@ -10,7 +10,7 @@ export interface IUser extends mongoose.Document {
   imgUrl?: string
   createdAt: Date
   updatedAt: Date
-  favoriteItems: string[]
+  favoriteItems: { food: string[]; product: string[] }
   loggedToday: LoggedToday
   currGoal: Goal
   goals: Goal[]
@@ -39,8 +39,8 @@ const userSchema = new mongoose.Schema(
       type: String,
     },
     favoriteItems: {
-      type: Array,
-      default: [],
+      type: Object,
+      default: { food: [], product: [] },
     },
     goals: {
       type: [Object],

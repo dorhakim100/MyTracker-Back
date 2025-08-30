@@ -23,10 +23,14 @@ export class LogController {
     }
   }
 
-  static async addLog(req: Request & { user?: { id: string } }, res: Response) {
+  static async addLog(
+    req: Request & { user?: { _id: string } },
+    res: Response
+  ) {
     try {
       const log = req.body
-      log.createdBy = req.user?.id as string
+
+      // log.createdBy = req.user?._id as string
       const addedLog = await LogService.add(log)
       res.json(addedLog)
     } catch (err: any) {
@@ -38,6 +42,7 @@ export class LogController {
   static async updateLog(req: Request, res: Response) {
     try {
       const log = await LogService.update(req.params.id, req.body)
+
       res.json(log)
     } catch (err: any) {
       logger.error('Failed to update log', err)

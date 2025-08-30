@@ -2,23 +2,23 @@ import mongoose from 'mongoose'
 import { Macros } from '../../types/Macros/Macros'
 
 export interface ILog extends mongoose.Document {
-  _id: mongoose.Types.ObjectId
+  // _id: mongoose.Types.ObjectId
   itemId: string
   macros: Macros
   meal: string
   numberOfServings: number
   source: string
   time: number
-  createdBy: mongoose.Types.ObjectId
+  createdBy: string
   // imgUrl?: string
 }
 
 const logSchema = new mongoose.Schema(
   {
-    _id: {
-      type: mongoose.Types.ObjectId,
-      required: true,
-    },
+    // _id: {
+    //   type: mongoose.Types.ObjectId,
+    //   required: true,
+    // },
     itemId: {
       type: String,
       required: true,
@@ -45,8 +45,8 @@ const logSchema = new mongoose.Schema(
     },
     //
     createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      type: String,
+      // ref: 'User',
       required: true,
     },
   },

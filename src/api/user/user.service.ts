@@ -17,8 +17,62 @@ export class UserService {
 
   static async getById(userId: string) {
     try {
-      const user = await User.findById(userId).select('-password')
-      return user
+      const [user] = await User.aggregate([
+        { $match: { _id: new mongoose.Types.ObjectId(userId) } },
+        { $project: { password: 0 } },
+        {
+          $addFields: {
+            loggedTodayLogIds: {
+              $map: {
+                input: { $ifNull: ['$loggedToday.logs', []] },
+                as: 'id',
+                in: {
+                  $cond: [
+                    { $eq: [{ $type: '$$id' }, 'objectId'] },
+                    '$$id',
+                    {
+                      $cond: [
+                        { $eq: [{ $type: '$$id' }, 'string'] },
+                        { $toObjectId: '$$id' },
+                        {
+                          $cond: [
+                            { $eq: [{ $type: '$$id' }, 'object'] },
+                            { $toObjectId: '$$id._id' },
+                            null,
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+        {
+          $addFields: {
+            loggedTodayLogIds: {
+              $filter: {
+                input: '$loggedTodayLogIds',
+                as: 'id',
+                cond: { $ne: ['$$id', null] },
+              },
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: 'logs',
+            localField: 'loggedTodayLogIds',
+            foreignField: '_id',
+            as: 'loggedTodayPopulated',
+          },
+        },
+        { $addFields: { 'loggedToday.logs': '$loggedTodayPopulated' } },
+        { $project: { loggedTodayLogIds: 0, loggedTodayPopulated: 0 } },
+      ])
+
+      return user || null
     } catch (err) {
       logger.error(`Failed to get user ${userId}`, err)
       throw err
@@ -46,7 +100,16 @@ export class UserService {
 
   static async update(userId: string, userToUpdate: Partial<IUser>) {
     try {
-      const user = await User.findByIdAndUpdate(userId, userToUpdate, {
+      const logsToUpdate = userToUpdate.loggedToday?.logs.map(
+        (log: any) => log._id
+      )
+
+      const userToSave = {
+        ...userToUpdate,
+        loggedToday: { ...userToUpdate.loggedToday, logs: logsToUpdate },
+      }
+
+      const user = await User.findByIdAndUpdate(userId, userToSave, {
         new: true,
       })
       return user
