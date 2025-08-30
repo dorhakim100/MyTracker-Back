@@ -109,6 +109,12 @@ export class DayService {
       console.log('userId', userId)
       const dateFromISO = getDateFromISO(date)
       console.log('date', dateFromISO)
+
+      const isExistingDay = await Day.findOne({ userId, date: dateFromISO })
+      if (!isExistingDay) {
+        await Day.create({ userId, date: dateFromISO })
+      }
+
       const [day] = await Day.aggregate([
         { $match: { userId, date: dateFromISO } },
         {
