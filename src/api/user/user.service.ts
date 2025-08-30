@@ -3,6 +3,7 @@ import { logger } from '../../services/logger.service'
 import { Goal } from '@/types/Goal/Goal'
 import mongoose from 'mongoose'
 import { LoggedToday } from '@/types/LoggedToday/LoggedToday'
+import { DayService } from '../day/day.service'
 
 export class UserService {
   static async query(filterBy = {}) {
@@ -22,54 +23,74 @@ export class UserService {
         { $project: { password: 0 } },
         {
           $addFields: {
-            loggedTodayLogIds: {
-              $map: {
-                input: { $ifNull: ['$loggedToday.logs', []] },
-                as: 'id',
-                in: {
+            loggedTodayObjectId: {
+              $cond: [
+                { $eq: [{ $type: '$loggedToday' }, 'string'] },
+                { $toObjectId: '$loggedToday' },
+                {
                   $cond: [
-                    { $eq: [{ $type: '$$id' }, 'objectId'] },
-                    '$$id',
-                    {
-                      $cond: [
-                        { $eq: [{ $type: '$$id' }, 'string'] },
-                        { $toObjectId: '$$id' },
-                        {
-                          $cond: [
-                            { $eq: [{ $type: '$$id' }, 'object'] },
-                            { $toObjectId: '$$id._id' },
-                            null,
-                          ],
-                        },
-                      ],
-                    },
+                    { $eq: [{ $type: '$loggedToday' }, 'objectId'] },
+                    '$loggedToday',
+                    null,
                   ],
                 },
-              },
-            },
-          },
-        },
-        {
-          $addFields: {
-            loggedTodayLogIds: {
-              $filter: {
-                input: '$loggedTodayLogIds',
-                as: 'id',
-                cond: { $ne: ['$$id', null] },
-              },
+              ],
             },
           },
         },
         {
           $lookup: {
-            from: 'logs',
-            localField: 'loggedTodayLogIds',
-            foreignField: '_id',
+            from: 'days',
+            let: { dayId: '$loggedTodayObjectId' },
+            pipeline: [
+              { $match: { $expr: { $eq: ['$_id', '$$dayId'] } } },
+              {
+                $addFields: {
+                  logObjectIds: {
+                    $map: {
+                      input: { $ifNull: ['$logs', []] },
+                      as: 'id',
+                      in: {
+                        $cond: [
+                          { $eq: [{ $type: '$$id' }, 'string'] },
+                          { $toObjectId: '$$id' },
+                          null,
+                        ],
+                      },
+                    },
+                  },
+                },
+              },
+              {
+                $addFields: {
+                  logObjectIds: {
+                    $filter: {
+                      input: '$logObjectIds',
+                      as: 'id',
+                      cond: { $ne: ['$$id', null] },
+                    },
+                  },
+                },
+              },
+              {
+                $lookup: {
+                  from: 'logs',
+                  localField: 'logObjectIds',
+                  foreignField: '_id',
+                  as: 'logs',
+                },
+              },
+              { $project: { logObjectIds: 0 } },
+            ],
             as: 'loggedTodayPopulated',
           },
         },
-        { $addFields: { 'loggedToday.logs': '$loggedTodayPopulated' } },
-        { $project: { loggedTodayLogIds: 0, loggedTodayPopulated: 0 } },
+        {
+          $addFields: {
+            loggedToday: { $arrayElemAt: ['$loggedTodayPopulated', 0] },
+          },
+        },
+        { $project: { loggedTodayPopulated: 0, loggedTodayObjectId: 0 } },
       ])
 
       return user || null
@@ -100,18 +121,28 @@ export class UserService {
 
   static async update(userId: string, userToUpdate: Partial<IUser>) {
     try {
-      const logsToUpdate = userToUpdate.loggedToday?.logs.map(
-        (log: any) => log._id
-      )
+      // const logsToUpdate = userToUpdate.loggedToday?.logs.map(
+      //   (log: any) => log._id
+      // )
 
-      const userToSave = {
-        ...userToUpdate,
-        loggedToday: { ...userToUpdate.loggedToday, logs: logsToUpdate },
-      }
+      // const userToSave = {
+      //   ...userToUpdate,
+      //   loggedToday: { ...userToUpdate.loggedToday, logs: logsToUpdate },
+      // }
 
-      const user = await User.findByIdAndUpdate(userId, userToSave, {
+      const user = await User.findByIdAndUpdate(userId, userToUpdate, {
         new: true,
       })
+
+      // if (user && userToUpdate.loggedToday) {
+      //   const { date, calories } = userToUpdate.loggedToday as LoggedToday
+      //   await DayService.upsertFromLoggedToday({
+      //     userId,
+      //     date,
+      //     logs: logsToUpdate || [],
+      //     calories: calories || 0,
+      //   })
+      // }
       return user
     } catch (err) {
       logger.error(`Failed to update user ${userId}`, err)
@@ -133,15 +164,6 @@ export class UserService {
         carbs: 300,
         fat: 53,
       },
-    }
-  }
-
-  static getLoggedToday(): LoggedToday {
-    return {
-      _id: new mongoose.Types.ObjectId().toString(),
-      date: new Date().toISOString(),
-      logs: [],
-      calories: 0,
     }
   }
 }

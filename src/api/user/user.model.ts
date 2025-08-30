@@ -11,13 +11,13 @@ export interface IUser extends mongoose.Document {
   createdAt: Date
   updatedAt: Date
   favoriteItems: { food: string[]; product: string[] }
-  loggedToday: LoggedToday
+  loggedToday: string
   currGoal: Goal
   goals: Goal[]
 }
 
 const defaultGoal = UserService.getDefaultGoal()
-const defaultLoggedToday = UserService.getLoggedToday()
+// const defaultLoggedToday = UserService.getLoggedToday()
 
 const userSchema = new mongoose.Schema(
   {
@@ -51,8 +51,8 @@ const userSchema = new mongoose.Schema(
       default: defaultGoal,
     },
     loggedToday: {
-      type: Object,
-      default: defaultLoggedToday,
+      type: String,
+      // default: defaultLoggedToday,
     },
   },
   {

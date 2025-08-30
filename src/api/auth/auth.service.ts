@@ -2,21 +2,21 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { User, IUser } from '../user/user.model'
 import { logger } from '../../services/logger.service'
+import { DayService } from '../day/day.service'
+import { IDay } from '../day/day.model'
 
 export class AuthService {
   static async login(email: string, password: string): Promise<IUser> {
     const user = await User.findOne({ email })
-    console.log(password)
-
-    console.log('user', user)
 
     if (!user) throw new Error('Invalid email or password')
 
     const match = await bcrypt.compare(password, user.password as string)
     if (!match) throw new Error('Invalid email or password')
 
-    delete user.password
-    return user
+    const userObj = user.toObject()
+    delete (userObj as any).password
+    return userObj as IUser
   }
 
   static async signup(credentials: {
@@ -37,11 +37,23 @@ export class AuthService {
     const hash = await bcrypt.hash(credentials.password, saltRounds)
     credentials.password = hash
 
-    console.log('credentials', credentials)
+    const defaultLoggedToday = DayService.getDefaultLoggedToday()
 
-    const user = await User.create(credentials)
-    delete user.password
-    return user
+    const user = await User.create({
+      ...credentials,
+      loggedToday: defaultLoggedToday._id,
+    })
+
+    const createdDay = await DayService.add(
+      defaultLoggedToday as any,
+      user._id as string
+    )
+
+    const userObj = user.toObject()
+    delete (userObj as any).password
+    ;(userObj as any).loggedToday = createdDay
+
+    return userObj as IUser
   }
 
   static getLoginToken(user: IUser) {

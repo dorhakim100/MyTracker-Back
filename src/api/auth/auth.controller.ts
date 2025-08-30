@@ -1,6 +1,8 @@
 import { Request, Response } from 'express'
 import { AuthService } from './auth.service'
 import { logger } from '../../services/logger.service'
+import { DayService } from '../day/day.service'
+import { IDay } from '../day/day.model'
 
 export class AuthController {
   static async login(req: Request, res: Response) {
@@ -24,9 +26,19 @@ export class AuthController {
 
       const account = await AuthService.signup(credentials)
       const loginToken = AuthService.getLoginToken(account)
-
       res.cookie('loginToken', loginToken, { sameSite: 'none', secure: true })
-      res.json(account)
+
+      const loggedToday = await DayService.getById(account.loggedToday)
+      console.log('loggedToday', loggedToday)
+      console.log('account', account)
+      const accountToReturn = {
+        ...account,
+        loggedToday: loggedToday as IDay,
+      }
+
+      //console.log('accountToReturn', accountToReturn)
+
+      res.json(accountToReturn)
     } catch (err: any) {
       logger.error('Failed to signup ' + err)
       res.status(400).send({ err: 'Failed to signup' })
