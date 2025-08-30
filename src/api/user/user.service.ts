@@ -103,7 +103,8 @@ export class UserService {
   static async getByEmail(email: string) {
     try {
       const user = await User.findOne({ email })
-      return user
+      const aggregatedUser = await UserService.getById(user?._id as string)
+      return aggregatedUser
     } catch (err) {
       logger.error(`Failed to get user by email ${email}`, err)
       throw err
@@ -143,7 +144,9 @@ export class UserService {
       //     calories: calories || 0,
       //   })
       // }
-      return user
+
+      const aggregatedUser = await UserService.getById(userId)
+      return aggregatedUser
     } catch (err) {
       logger.error(`Failed to update user ${userId}`, err)
       throw err
