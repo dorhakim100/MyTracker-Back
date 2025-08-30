@@ -2,6 +2,7 @@ import { Day, IDay } from './day.model'
 import mongoose from 'mongoose'
 import { logger } from '../../services/logger.service'
 import { LoggedToday } from '@/types/LoggedToday/LoggedToday'
+import { getDateFromISO } from '../../services/utils'
 
 export class DayService {
   static async upsertFromLoggedToday(params: {
@@ -105,8 +106,11 @@ export class DayService {
     date: string
   ): Promise<IDay | null> {
     try {
+      console.log('userId', userId)
+      const dateFromISO = getDateFromISO(date)
+      console.log('date', dateFromISO)
       const [day] = await Day.aggregate([
-        { $match: { userId, date } },
+        { $match: { userId, date: dateFromISO } },
         {
           $addFields: {
             logObjectIds: {
@@ -145,6 +149,7 @@ export class DayService {
         },
         { $project: { logObjectIds: 0 } },
       ])
+      console.log('day', day)
       return day || null
     } catch (err) {
       logger.error(
@@ -209,7 +214,7 @@ export class DayService {
   static getDefaultLoggedToday() {
     return {
       _id: new mongoose.Types.ObjectId().toString() as string,
-      date: new Date().toISOString(),
+      date: getDateFromISO(new Date().toISOString()),
       logs: [],
       calories: 0,
       createdAt: new Date(),
@@ -227,12 +232,21 @@ export class DayService {
     }
   }
 
-  static async update(day: Partial<IDay>, userId: string) {
+  static async update(day: Partial<IDay>, userId?: string) {
     try {
       const dayId = day._id
+
+      let dayToUpdate
+
+      if (userId) {
+        dayToUpdate = { ...day, userId }
+      } else {
+        dayToUpdate = day
+      }
+
       const updatedDay = await Day.findByIdAndUpdate(
         dayId,
-        { ...day, userId },
+        { ...dayToUpdate },
         { new: true }
       )
       return updatedDay

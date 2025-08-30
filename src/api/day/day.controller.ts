@@ -2,6 +2,17 @@ import { Request, Response } from 'express'
 import { DayService } from './day.service'
 
 export class DayController {
+  static async get(req: Request, res: Response) {
+    const { date, userId } = req.query as { date: string; userId: string }
+    try {
+      const days = await DayService.getByUserAndDate(userId, date)
+      console.log('days', days)
+      res.json(days)
+    } catch (err: any) {
+      res.status(500).send({ err: 'Failed to get days' })
+    }
+  }
+
   static async upsert(req: Request, res: Response) {
     try {
       const { userId, date, logs, calories } = req.body
@@ -52,7 +63,7 @@ export class DayController {
 
   static async update(req: Request, res: Response) {
     try {
-      const day = await DayService.update(req.body, req.params.id)
+      const day = await DayService.update(req.body)
       res.json(day)
     } catch (err: any) {
       res.status(500).send({ err: 'Failed to update day' })

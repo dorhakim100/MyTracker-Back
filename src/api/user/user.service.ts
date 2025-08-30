@@ -2,8 +2,6 @@ import { User, IUser } from './user.model'
 import { logger } from '../../services/logger.service'
 import { Goal } from '@/types/Goal/Goal'
 import mongoose from 'mongoose'
-import { LoggedToday } from '@/types/LoggedToday/LoggedToday'
-import { DayService } from '../day/day.service'
 
 export class UserService {
   static async query(filterBy = {}) {
@@ -122,28 +120,9 @@ export class UserService {
 
   static async update(userId: string, userToUpdate: Partial<IUser>) {
     try {
-      // const logsToUpdate = userToUpdate.loggedToday?.logs.map(
-      //   (log: any) => log._id
-      // )
-
-      // const userToSave = {
-      //   ...userToUpdate,
-      //   loggedToday: { ...userToUpdate.loggedToday, logs: logsToUpdate },
-      // }
-
       const user = await User.findByIdAndUpdate(userId, userToUpdate, {
         new: true,
       })
-
-      // if (user && userToUpdate.loggedToday) {
-      //   const { date, calories } = userToUpdate.loggedToday as LoggedToday
-      //   await DayService.upsertFromLoggedToday({
-      //     userId,
-      //     date,
-      //     logs: logsToUpdate || [],
-      //     calories: calories || 0,
-      //   })
-      // }
 
       const aggregatedUser = await UserService.getById(userId)
       return aggregatedUser
