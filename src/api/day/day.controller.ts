@@ -49,4 +49,13 @@ export class DayController {
       res.status(500).send({ err: 'Failed to list days' })
     }
   }
+
+  static async update(req: Request, res: Response) {
+    try {
+      const day = await DayService.update(req.body, req.params.id)
+      res.json(day)
+    } catch (err: any) {
+      res.status(500).send({ err: 'Failed to update day' })
+    }
+  }
 }
