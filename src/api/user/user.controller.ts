@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { UserService } from './user.service'
 import { logger } from '../../services/logger.service'
+import { AuthService } from '../auth/auth.service'
 
 export class UserController {
   static async getUsers(req: Request, res: Response) {
@@ -10,6 +11,18 @@ export class UserController {
     } catch (err: any) {
       logger.error('Failed to get users', err)
       res.status(500).send({ err: 'Failed to get users' })
+    }
+  }
+
+  static async rememberUser(req: Request, res: Response) {
+    try {
+      const user = await UserService.getById(req.params.id)
+      const loginToken = AuthService.getLoginToken(user)
+      res.cookie('loginToken', loginToken, { sameSite: 'none', secure: true })
+      res.json(user)
+    } catch (err: any) {
+      logger.error('Failed to remember user', err)
+      res.status(500).send({ err: 'Failed to remember user' })
     }
   }
 
