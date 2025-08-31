@@ -1,7 +1,8 @@
+import mongoose from 'mongoose'
+
 import { User, IUser } from './user.model'
 import { logger } from '../../services/logger.service'
 import { Goal } from '@/types/Goal/Goal'
-import mongoose from 'mongoose'
 
 export class UserService {
   static async query(filterBy = {}) {
@@ -17,78 +18,122 @@ export class UserService {
   static async getById(userId: string) {
     try {
       const [user] = await User.aggregate([
+        // 1) Find the user
         { $match: { _id: new mongoose.Types.ObjectId(userId) } },
+
+        // 2) Hide password
         { $project: { password: 0 } },
+
+        // 3) Normalize `loggedToday` -> ObjectId | null (handles string/ObjectId/missing)
         {
-          $addFields: {
-            loggedTodayObjectId: {
-              $cond: [
-                { $eq: [{ $type: '$loggedToday' }, 'string'] },
-                { $toObjectId: '$loggedToday' },
-                {
-                  $cond: [
-                    { $eq: [{ $type: '$loggedToday' }, 'objectId'] },
-                    '$loggedToday',
-                    null,
-                  ],
-                },
-              ],
+          $set: {
+            _loggedTodayOid: {
+              $switch: {
+                branches: [
+                  {
+                    case: {
+                      $and: [
+                        { $eq: [{ $type: '$loggedToday' }, 'string'] },
+                        {
+                          $regexMatch: {
+                            input: '$loggedToday',
+                            regex: '^[0-9a-fA-F]{24}$',
+                          },
+                        },
+                      ],
+                    },
+                    then: { $toObjectId: '$loggedToday' },
+                  },
+                  {
+                    case: { $eq: [{ $type: '$loggedToday' }, 'objectId'] },
+                    then: '$loggedToday',
+                  },
+                ],
+                default: null,
+              },
             },
           },
         },
+
+        // 4) Lookup Day by normalized id; inside, keep date & calories and populate logs
         {
           $lookup: {
             from: 'days',
-            let: { dayId: '$loggedTodayObjectId' },
+            let: { dayId: '$_loggedTodayOid' },
             pipeline: [
               { $match: { $expr: { $eq: ['$_id', '$$dayId'] } } },
+
+              // Keep only what we need from Day and normalize its logs (string/ObjectId -> ObjectId[])
               {
-                $addFields: {
-                  logObjectIds: {
-                    $map: {
-                      input: { $ifNull: ['$logs', []] },
-                      as: 'id',
-                      in: {
-                        $cond: [
-                          { $eq: [{ $type: '$$id' }, 'string'] },
-                          { $toObjectId: '$$id' },
-                          null,
-                        ],
-                      },
-                    },
-                  },
-                },
-              },
-              {
-                $addFields: {
-                  logObjectIds: {
+                $project: {
+                  _id: 1,
+                  date: 1,
+                  calories: 1,
+                  logs: {
                     $filter: {
-                      input: '$logObjectIds',
-                      as: 'id',
-                      cond: { $ne: ['$$id', null] },
+                      input: {
+                        $map: {
+                          input: { $ifNull: ['$logs', []] },
+                          as: 'id',
+                          in: {
+                            $switch: {
+                              branches: [
+                                {
+                                  case: {
+                                    $and: [
+                                      { $eq: [{ $type: '$$id' }, 'string'] },
+                                      {
+                                        $regexMatch: {
+                                          input: '$$id',
+                                          regex: '^[0-9a-fA-F]{24}$',
+                                        },
+                                      },
+                                    ],
+                                  },
+                                  then: { $toObjectId: '$$id' },
+                                },
+                                {
+                                  case: {
+                                    $eq: [{ $type: '$$id' }, 'objectId'],
+                                  },
+                                  then: '$$id',
+                                },
+                              ],
+                              default: null,
+                            },
+                          },
+                        },
+                      },
+                      as: 'oid',
+                      cond: { $ne: ['$$oid', null] },
                     },
                   },
                 },
               },
+
+              // Populate Day.logs -> full Log docs
               {
                 $lookup: {
                   from: 'logs',
-                  localField: 'logObjectIds',
+                  localField: 'logs',
                   foreignField: '_id',
                   as: 'logs',
                 },
               },
-              { $project: { logObjectIds: 0 } },
             ],
-            as: 'loggedTodayPopulated',
+            as: '_dayAgg',
           },
         },
+
+        // 5) Flatten: user.loggedToday = the Day doc (or null)
         {
-          $addFields: {
-            loggedToday: { $arrayElemAt: ['$loggedTodayPopulated', 0] },
+          $set: {
+            loggedToday: { $first: '$_dayAgg' },
           },
         },
-        { $project: { loggedTodayPopulated: 0, loggedTodayObjectId: 0 } },
+
+        // 6) Cleanup temp fields
+        { $unset: ['_loggedTodayOid', '_dayAgg'] },
       ])
 
       return user || null
