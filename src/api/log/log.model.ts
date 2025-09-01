@@ -52,6 +52,7 @@ const logSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    versionKey: false,
   }
 )
 

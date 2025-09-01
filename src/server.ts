@@ -59,7 +59,10 @@ app.get('/**', (req, res) => {
 // Database connection
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URL as string)
+    const uri = process.env.MONGO_URL as string
+    const dbName = process.env.DB_NAME
+    const conn = await mongoose.connect(uri, { dbName })
+
     logger.info(`MongoDB Connected: ${conn.connection.host}`)
   } catch (error) {
     logger.error('Error connecting to MongoDB:', error)
