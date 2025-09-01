@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.dayRoutes = void 0;
+const express_1 = require("express");
+const day_controller_1 = require("./day.controller");
+const auth_middleware_1 = require("../../middleware/auth.middleware");
+const router = (0, express_1.Router)();
+router.get('/', auth_middleware_1.requireAuth, day_controller_1.DayController.get);
+router.post('/', auth_middleware_1.requireAuth, day_controller_1.DayController.upsert);
+router.get('/:id', auth_middleware_1.requireAuth, day_controller_1.DayController.getById);
+router.put('/:id', auth_middleware_1.requireAuth, day_controller_1.DayController.update);
+router.get('/user/:userId', auth_middleware_1.requireAuth, day_controller_1.DayController.listByUser);
+router.get('/by-date/:userId', auth_middleware_1.requireAuth, day_controller_1.DayController.getByDate);
+exports.dayRoutes = router;
