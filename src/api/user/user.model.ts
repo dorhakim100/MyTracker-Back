@@ -39,9 +39,13 @@ const userSchema = new mongoose.Schema(
       type: String,
     },
     favoriteItems: {
-      type: Object,
-      default: { food: [], product: [] },
+      type: Array,
+      default: [],
     },
+    // favoriteItems: {
+    //   type: Object,
+    //   default: { food: [], product: [] },
+    // },
     goals: {
       type: [Object],
       default: [defaultGoal],
