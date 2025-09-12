@@ -10,6 +10,7 @@ import { authRoutes } from './api/auth/auth.routes'
 import { userRoutes } from './api/user/user.routes'
 import { logRoutes } from './api/log/log.routes'
 import { dayRoutes } from './api/day/day.routes'
+import { mealRoutes } from './api/meal/meal.routes'
 
 import { setupSocketAPI } from './services/socket/socket.service'
 import { setupAsyncLocalStorage } from './middleware/setupAls.middleware'
@@ -47,6 +48,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/user', userRoutes)
 app.use('/api/log', logRoutes)
 app.use('/api/day', dayRoutes)
+app.use('/api/meal', mealRoutes)
 
 // Setup Socket.IO
 setupSocketAPI(server)
