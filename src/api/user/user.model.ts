@@ -14,6 +14,7 @@ export interface IUser extends mongoose.Document {
   loggedToday: string
   currGoal: Goal
   goals: Goal[]
+  mealsIds: string[]
 }
 
 const defaultGoal = UserService.getDefaultGoal()
@@ -57,6 +58,10 @@ const userSchema = new mongoose.Schema(
     loggedToday: {
       type: String,
       // default: defaultLoggedToday,
+    },
+    mealsIds: {
+      type: [String],
+      default: [],
     },
   },
   {
