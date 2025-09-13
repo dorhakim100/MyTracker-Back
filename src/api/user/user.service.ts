@@ -135,14 +135,14 @@ export class UserService {
         // 6) Cleanup temp fields
         { $unset: ['_loggedTodayOid', '_dayAgg'] },
 
-        {
-          $lookup: {
-            from: 'meals',
-            localField: 'mealsIds',
-            foreignField: '_id',
-            as: 'meals',
-          },
-        },
+        // {
+        //   $lookup: {
+        //     from: 'meals',
+        //     localField: 'mealsIds',
+        //     foreignField: '_id',
+        //     as: 'meals',
+        //   },
+        // },
       ])
 
       return user || null
