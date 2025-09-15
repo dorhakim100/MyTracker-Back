@@ -30,6 +30,8 @@ export class MealController {
     try {
       const meal = req.body
 
+      logger.info('Adding meal', meal)
+
       // log.createdBy = req.user?._id as string
       const addedMeal = await MealService.add(meal)
       res.json(addedMeal)

@@ -135,15 +135,48 @@ export class UserService {
         // 6) Cleanup temp fields
         { $unset: ['_loggedTodayOid', '_dayAgg'] },
 
-        // {
-        //   $lookup: {
-        //     from: 'meals',
-        //     localField: 'mealsIds',
-        //     foreignField: '_id',
-        //     as: 'meals',
+        // 7) Convert mealsIds (strings/ObjectIds) -> ObjectId[]
+        {
+          $addFields: {
+            mealsObjectIds: {
+              $filter: {
+                input: {
+                  $map: {
+                    input: { $ifNull: ['$mealsIds', []] },
+                    as: 'id',
+                    in: {
+                      $switch: {
+                        branches: [
+                          {
+                            case: { $eq: [{ $type: '$$id' }, 'objectId'] },
+                            then: '$$id',
+                          },
+                          {
+                            case: { $eq: [{ $type: '$$id' }, 'string'] },
+                            then: { $toObjectId: '$$id' },
+                          },
+                        ],
+                        default: null,
+                      },
+                    },
+                  },
+                },
+                as: 'oid',
+                cond: { $ne: ['$$oid', null] },
+              },
+            },
+          },
+        },
 
-        //   },
-        // },
+        // 8) Lookup meals by normalized ids
+        {
+          $lookup: {
+            from: 'meals',
+            localField: 'mealsObjectIds',
+            foreignField: '_id',
+            as: 'meals',
+          },
+        },
       ])
 
       return user || null
