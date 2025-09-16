@@ -172,8 +172,15 @@ export class UserService {
         {
           $lookup: {
             from: 'meals',
-            localField: 'mealsObjectIds',
-            foreignField: '_id',
+            let: { ids: '$mealsObjectIds' },
+            pipeline: [
+              { $match: { $expr: { $in: ['$_id', '$$ids'] } } },
+              {
+                $addFields: { sortIndex: { $indexOfArray: ['$$ids', '$_id'] } },
+              },
+              { $sort: { sortIndex: 1 } },
+              { $project: { sortIndex: 0 } },
+            ],
             as: 'meals',
           },
         },
@@ -213,6 +220,7 @@ export class UserService {
       })
 
       const aggregatedUser = await UserService.getById(userId)
+      logger.info('aggregatedUser', aggregatedUser)
       return aggregatedUser
     } catch (err) {
       logger.error(`Failed to update user ${userId}`, err)
