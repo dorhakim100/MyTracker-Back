@@ -32,7 +32,7 @@ export class AuthService {
       throw new Error('Missing required signup information')
 
     const userExist = await User.findOne({ email: credentials.email })
-    console.log('userExist', userExist)
+
     if (userExist) throw new Error('Email already exists')
 
     const hash = await bcrypt.hash(credentials.password, saltRounds)

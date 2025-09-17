@@ -6,7 +6,7 @@ export class DayController {
     const { date, userId } = req.query as { date: string; userId: string }
     try {
       const days = await DayService.getByUserAndDate(userId, date)
-      console.log('days', days)
+
       res.json(days)
     } catch (err: any) {
       res.status(500).send({ err: 'Failed to get days' })

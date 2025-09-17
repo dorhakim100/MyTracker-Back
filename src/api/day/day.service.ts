@@ -92,7 +92,6 @@ export class DayService {
         { $addFields: { logs: '$logs' } },
         { $project: { logsIds: 0 } },
       ])
-      console.log(day)
 
       return day[0]
     } catch (err) {
@@ -106,9 +105,7 @@ export class DayService {
     date: string
   ): Promise<IDay | null> {
     try {
-      console.log('userId', userId)
       const dateFromISO = getDateFromISO(date)
-      console.log('date', dateFromISO)
 
       const isExistingDay = await Day.findOne({ userId, date: dateFromISO })
       if (!isExistingDay) {
@@ -155,7 +152,7 @@ export class DayService {
         },
         { $project: { logObjectIds: 0 } },
       ])
-      console.log('day', day)
+
       return day || null
     } catch (err) {
       logger.error(

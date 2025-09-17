@@ -22,21 +22,17 @@ export class AuthController {
   static async signup(req: Request, res: Response) {
     try {
       const credentials = req.body
-      console.log('credentials', credentials)
 
       const account = await AuthService.signup(credentials)
       const loginToken = AuthService.getLoginToken(account)
       res.cookie('loginToken', loginToken, { sameSite: 'none', secure: true })
 
       const loggedToday = await DayService.getById(account.loggedToday)
-      console.log('loggedToday', loggedToday)
-      console.log('account', account)
+
       const accountToReturn = {
         ...account,
         loggedToday: loggedToday as IDay,
       }
-
-      //console.log('accountToReturn', accountToReturn)
 
       res.json(accountToReturn)
     } catch (err: any) {

@@ -24,5 +24,4 @@ export const setLoggedinUser = (user: any) => {
 
   if (storage) storage.loggedinUser = user
   const userAfter = getLoggedinUser()
-  console.log(userAfter)
 }
