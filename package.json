@@ -8,8 +8,7 @@
     "dev": "nodemon src/server.ts",
     "build": "tsc",
     "lint": "eslint . --ext .ts",
-    "test": "jest",
-    "heroku-postbuild": "npm run build"
+    "test": "jest"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
