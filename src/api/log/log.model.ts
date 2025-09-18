@@ -35,6 +35,10 @@ const logSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    servingSize: {
+      type: Number,
+      required: true,
+    },
     source: {
       type: String,
       required: true,
