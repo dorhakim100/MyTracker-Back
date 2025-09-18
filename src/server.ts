@@ -22,24 +22,27 @@ const app = express()
 const server = http.createServer(app)
 
 // Express App Config
+app.set('trust proxy', 1)
 app.use(cookieParser())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.resolve('public')))
-} else {
-  const corsOptions = {
-    origin: [
-      'http://127.0.0.1:3000',
-      'http://localhost:3000',
-      'http://127.0.0.1:5173',
-      'http://localhost:5173',
-    ],
-    credentials: true,
-  }
-  app.use(cors(corsOptions))
-}
+app.use(express.static(path.join(__dirname, '../public')))
+
+// if (process.env.NODE_ENV === 'production') {
+//   app.use(express.static(path.resolve('public')))
+// } else {
+//   const corsOptions = {
+//     origin: [
+//       'http://127.0.0.1:3000',
+//       'http://localhost:3000',
+//       'http://127.0.0.1:5173',
+//       'http://localhost:5173',
+//     ],
+//     credentials: true,
+//   }
+//   app.use(cors(corsOptions))
+// }
 
 app.all('*', setupAsyncLocalStorage)
 
@@ -55,7 +58,8 @@ setupSocketAPI(server)
 
 // Serve frontend in production
 app.get('/**', (req, res) => {
-  res.sendFile(path.resolve('public/index.html'))
+  // res.sendFile(path.resolve('public/index.html'))
+  res.sendFile(path.join(__dirname, '../public/index.html'))
 })
 
 // Database connection
