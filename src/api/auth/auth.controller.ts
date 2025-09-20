@@ -46,6 +46,7 @@ export class AuthController {
       res.clearCookie('loginToken')
       res.send({ msg: 'Logged out successfully' })
     } catch (err: any) {
+      logger.error('Failed to logout ' + err)
       res.status(500).send({ err: 'Failed to logout' })
     }
   }
