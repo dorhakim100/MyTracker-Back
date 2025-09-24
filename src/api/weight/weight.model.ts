@@ -2,7 +2,7 @@ import mongoose from 'mongoose'
 
 export interface IWeight extends mongoose.Document {
   userId: string
-  weight: number
+  kg: number
   createdAt: number
 }
 
@@ -13,7 +13,7 @@ const weightSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    weight: {
+    kg: {
       type: Number,
       required: true,
     },

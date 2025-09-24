@@ -150,6 +150,7 @@ export class DayService {
             as: 'logs',
           },
         },
+
         { $project: { logObjectIds: 0 } },
       ])
 
