@@ -184,7 +184,63 @@ export class UserService {
             as: 'meals',
           },
         },
+        {
+          $addFields: {
+            weightsObjectIds: {
+              $filter: {
+                input: {
+                  $map: {
+                    input: { $ifNull: ['$weightsIds', []] },
+                    as: 'id',
+                    in: {
+                      $switch: {
+                        branches: [
+                          {
+                            case: { $eq: [{ $type: '$$id' }, 'objectId'] },
+                            then: '$$id',
+                          },
+                          {
+                            case: { $eq: [{ $type: '$$id' }, 'string'] },
+                            then: { $toObjectId: '$$id' },
+                          },
+                        ],
+                        default: null,
+                      },
+                    },
+                  },
+                },
+                as: 'oid',
+                cond: { $ne: ['$$oid', null] },
+              },
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: 'weights',
+            let: { ids: '$weightsObjectIds' },
+            pipeline: [
+              { $match: { $expr: { $in: ['$_id', '$$ids'] } } },
+              {
+                $addFields: { sortIndex: { $indexOfArray: ['$$ids', '$_id'] } },
+              },
+              { $sort: { sortIndex: 1 } },
+              { $project: { sortIndex: 0 } },
+            ],
+            as: 'weights',
+          },
+        },
+        {
+          $project: {
+            mealsObjectIds: 0,
+            weightsObjectIds: 0,
+            mealsIds: 0,
+            weightsIds: 0,
+          },
+        },
       ])
+
+      logger.info('user', user)
 
       return user || null
     } catch (err) {

@@ -106,6 +106,8 @@ export class DayService {
   ): Promise<IDay | null> {
     try {
       const dateFromISO = getDateFromISO(date)
+      const dayStartMs = new Date(`${dateFromISO}T00:00:00.000Z`).getTime()
+      const dayEndMs = new Date(`${dateFromISO}T23:59:59.999Z`).getTime()
 
       const isExistingDay = await Day.findOne({ userId, date: dateFromISO })
       if (!isExistingDay) {
@@ -150,7 +152,30 @@ export class DayService {
             as: 'logs',
           },
         },
-        { $project: { logObjectIds: 0 } },
+        {
+          $lookup: {
+            from: 'weights',
+            let: { uid: '$userId' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ['$userId', '$$uid'] },
+                      { $gte: ['$createdAt', dayStartMs] },
+                      { $lte: ['$createdAt', dayEndMs] },
+                    ],
+                  },
+                },
+              },
+              { $sort: { createdAt: -1 } },
+              { $limit: 1 },
+            ],
+            as: 'weightArray',
+          },
+        },
+        { $addFields: { weight: { $arrayElemAt: ['$weightArray', 0] } } },
+        { $project: { logObjectIds: 0, weightArray: 0 } },
       ])
 
       return day || null
