@@ -6,8 +6,7 @@ import { LoggedToday } from '@/types/LoggedToday/LoggedToday'
 export interface IUser extends mongoose.Document {
   email: string
   password?: string
-  fullname: string
-  imgUrl?: string
+  details: UserDetails
   createdAt: Date
   updatedAt: Date
   // favoriteItems: { food: string[]; product: string[] }
@@ -17,6 +16,14 @@ export interface IUser extends mongoose.Document {
   goals: Goal[]
   mealsIds: string[]
   weightsIds: string[]
+}
+
+interface UserDetails {
+  fullname: string
+  imgUrl: string
+  birthdate: number
+  height: number
+  gender: string
 }
 
 const defaultGoal = UserService.getDefaultGoal()
@@ -34,12 +41,16 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    fullname: {
-      type: String,
-      required: true,
-    },
-    imgUrl: {
-      type: String,
+
+    details: {
+      type: Object,
+      default: {
+        fullname: '',
+        imgUrl: '',
+        birthdate: 0,
+        height: 170,
+        gender: 'male',
+      },
     },
     favoriteItems: {
       type: Array,

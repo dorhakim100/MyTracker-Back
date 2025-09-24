@@ -60,7 +60,7 @@ export class AuthService {
   static getLoginToken(user: IUser) {
     const userInfo = {
       _id: user._id,
-      fullname: user.fullname,
+      fullname: user.details.fullname,
       email: user.email,
     }
     return jwt.sign(userInfo, process.env.JWT_SECRET as string, {

@@ -234,6 +234,8 @@ export class UserService {
           $project: {
             mealsObjectIds: 0,
             weightsObjectIds: 0,
+            mealsIds: 0,
+            weightsIds: 0,
           },
         },
       ])
