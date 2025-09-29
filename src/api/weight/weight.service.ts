@@ -12,11 +12,15 @@ export class WeightService {
     }
   }
 
-  static async listByUser(userId: string, limit = 100) {
+  static async listByUser(userId: string, fromDate: string, toDate: string) {
     try {
-      const weights = await Weight.find({ userId })
-        .sort({ createdAt: -1 })
-        .limit(limit)
+      const fromDateMs = new Date(fromDate).getTime()
+      const toDateMs = new Date(toDate).getTime()
+      const weights = await Weight.find({
+        userId,
+        createdAt: { $gte: fromDateMs, $lte: toDateMs },
+      }).sort({ createdAt: -1 })
+
       return weights
     } catch (err) {
       logger.error(`WeightService.listByUser failed for ${userId}`, err)

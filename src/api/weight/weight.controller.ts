@@ -5,11 +5,17 @@ import { logger } from '../../services/logger.service'
 export class WeightController {
   static async getWeightsByUser(req: Request, res: Response) {
     try {
-      const { userId, limit } = req.query as { userId?: string; limit?: string }
+      const { userId, fromDate, toDate } = req.query as {
+        userId?: string
+        fromDate?: string
+        toDate?: string
+      }
+
       if (userId) {
         const weights = await WeightService.listByUser(
           userId,
-          parseInt(String(limit || '100'), 10)
+          fromDate || '',
+          toDate || ''
         )
         return res.json(weights)
       }
