@@ -221,21 +221,20 @@ export class UserService {
             let: { ids: '$weightsObjectIds' },
             pipeline: [
               { $match: { $expr: { $in: ['$_id', '$$ids'] } } },
-              {
-                $addFields: { sortIndex: { $indexOfArray: ['$$ids', '$_id'] } },
-              },
-              { $sort: { sortIndex: 1 } },
-              { $project: { sortIndex: 0 } },
+              { $sort: { createdAt: -1 } },
+              { $limit: 1 },
             ],
-            as: 'weights',
+            as: '_lastWeight',
           },
         },
+        { $set: { lastWeight: { $first: '$_lastWeight' } } },
         {
           $project: {
             mealsObjectIds: 0,
             weightsObjectIds: 0,
             mealsIds: 0,
             weightsIds: 0,
+            _lastWeight: 0,
           },
         },
       ])
