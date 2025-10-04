@@ -6,17 +6,13 @@ export class WeightController {
   static async getWeightsByUser(req: Request, res: Response) {
     try {
       const { userId, fromDate, toDate } = req.query as {
-        userId?: string
-        fromDate?: string
-        toDate?: string
+        userId: string
+        fromDate: string | null
+        toDate: string | null
       }
 
       if (userId) {
-        const weights = await WeightService.listByUser(
-          userId,
-          fromDate || '',
-          toDate || ''
-        )
+        const weights = await WeightService.listByUser(userId, fromDate, toDate)
         return res.json(weights)
       }
       const weights = await WeightService.query(req.query as any)

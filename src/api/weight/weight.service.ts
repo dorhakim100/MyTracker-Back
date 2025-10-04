@@ -12,10 +12,14 @@ export class WeightService {
     }
   }
 
-  static async listByUser(userId: string, fromDate: string, toDate: string) {
+  static async listByUser(
+    userId: string,
+    fromDate: string | null,
+    toDate: string | null
+  ) {
     try {
-      const fromDateMs = new Date(fromDate).getTime()
-      const toDateMs = new Date(toDate).getTime()
+      const fromDateMs = fromDate ? new Date(fromDate).getTime() : 0
+      const toDateMs = toDate ? new Date(toDate).getTime() : Date.now()
       const weights = await Weight.find({
         userId,
         createdAt: { $gte: fromDateMs, $lte: toDateMs },
