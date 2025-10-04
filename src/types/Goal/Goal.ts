@@ -2,7 +2,7 @@ import { Macros } from '../Macros/Macros'
 
 export interface Goal {
   _id: string
-  isMain: boolean
+  isSelected: boolean
   title: string
   updatedAt: Date
 

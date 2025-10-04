@@ -287,7 +287,7 @@ export class UserService {
     const id = new mongoose.Types.ObjectId().toString()
     return {
       _id: id,
-      isMain: true,
+      isSelected: true,
       updatedAt: new Date(),
       title: 'My Goal',
       dailyCalories: 2400,
