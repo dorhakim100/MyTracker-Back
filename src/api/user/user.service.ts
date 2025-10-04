@@ -237,9 +237,44 @@ export class UserService {
             _lastWeight: 0,
           },
         },
+        {
+          $lookup: {
+            from: 'goals',
+            let: { uid: '$_id' },
+            pipeline: [
+              {
+                $match: { $expr: { $eq: ['$userId', { $toString: '$$uid' }] } },
+              },
+              { $sort: { startDate: -1 } },
+            ],
+            as: 'goals',
+          },
+        },
+        {
+          $set: {
+            currGoal: {
+              $first: {
+                $filter: {
+                  input: '$goals',
+                  as: 'g',
+                  cond: { $eq: ['$$g.isSelected', true] },
+                },
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            mealsObjectIds: 0,
+            weightsObjectIds: 0,
+            mealsIds: 0,
+            weightsIds: 0,
+            goalsIds: 0,
+          },
+        },
       ])
 
-      logger.info('user', user)
+      console.log('user', user)
 
       return user || null
     } catch (err) {
@@ -270,12 +305,17 @@ export class UserService {
 
   static async update(userId: string, userToUpdate: Partial<IUser>) {
     try {
+      delete userToUpdate.goals
+      delete userToUpdate.currGoal
+
+      console.log('userToUpdate', userToUpdate)
+
       const user = await User.findByIdAndUpdate(userId, userToUpdate, {
         new: true,
       })
 
       const aggregatedUser = await UserService.getById(userId)
-      logger.info('aggregatedUser', aggregatedUser)
+
       return aggregatedUser
     } catch (err) {
       logger.error(`Failed to update user ${userId}`, err)

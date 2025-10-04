@@ -54,6 +54,7 @@ export class GoalController {
   static async select(req: Request, res: Response) {
     try {
       const { userId, goalId } = req.body as { userId: string; goalId: string }
+      console.log('Selecting goal', userId, goalId)
       const updated = await GoalService.select(userId, goalId)
       res.json(updated)
     } catch (err: any) {

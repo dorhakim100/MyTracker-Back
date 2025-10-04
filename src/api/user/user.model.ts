@@ -16,6 +16,7 @@ export interface IUser extends mongoose.Document {
   goals: Goal[]
   mealsIds: string[]
   weightsIds: string[]
+  goalsIds: string[]
 }
 
 interface UserDetails {
@@ -26,7 +27,7 @@ interface UserDetails {
   gender: string
 }
 
-const defaultGoal = UserService.getDefaultGoal()
+// const defaultGoal = UserService.getDefaultGoal()
 // const defaultLoggedToday = UserService.getLoggedToday()
 
 const userSchema = new mongoose.Schema(
@@ -62,11 +63,11 @@ const userSchema = new mongoose.Schema(
     // },
     goals: {
       type: [Object],
-      default: [defaultGoal],
+      default: [],
     },
     currGoal: {
       type: Object,
-      default: defaultGoal,
+      default: {},
     },
     loggedToday: {
       type: String,
@@ -77,6 +78,10 @@ const userSchema = new mongoose.Schema(
       default: [],
     },
     weightsIds: {
+      type: Array,
+      default: [],
+    },
+    goalsIds: {
       type: Array,
       default: [],
     },

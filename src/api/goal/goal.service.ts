@@ -73,11 +73,13 @@ export class GoalService {
       // Unselect all
       await GoalModel.updateMany({ userId }, { $set: { isSelected: false } })
       // Select given
-      const updated = await GoalModel.findByIdAndUpdate(
-        goalId,
-        { isSelected: true, updatedAt: Date.now() },
-        { new: true }
-      )
+
+      const updated = await GoalModel.findByIdAndUpdate(goalId, {
+        isSelected: true,
+        updatedAt: Date.now(),
+      })
+      console.log(updated)
+
       return updated
     } catch (err) {
       logger.error(`GoalService.select failed for ${goalId}`, err)
