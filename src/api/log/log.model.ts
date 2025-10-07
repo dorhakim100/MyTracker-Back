@@ -10,6 +10,7 @@ export interface ILog extends mongoose.Document {
   source: string
   time: number
   createdBy: string
+  name?: string
   // imgUrl?: string
 }
 
@@ -52,6 +53,10 @@ const logSchema = new mongoose.Schema(
       type: String,
       // ref: 'User',
       required: true,
+    },
+    name: {
+      type: String,
+      required: false,
     },
   },
   {
