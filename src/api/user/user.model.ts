@@ -51,6 +51,7 @@ const userSchema = new mongoose.Schema(
         birthdate: 0,
         height: 170,
         gender: 'male',
+        activity: 'sedentary',
       },
     },
     favoriteItems: {
