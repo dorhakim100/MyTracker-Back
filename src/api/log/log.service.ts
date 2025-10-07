@@ -1,5 +1,6 @@
 import { Log, ILog } from './log.model'
 import { logger } from '../../services/logger.service'
+import { makeId } from '../../services/utils'
 
 export class LogService {
   static async query(filterBy = {}) {
@@ -24,6 +25,8 @@ export class LogService {
 
   static async add(log: Partial<ILog>) {
     try {
+      if (log.itemId === '') log.itemId = `custom-log`
+
       const addedLog = await Log.create(log)
       return addedLog
     } catch (err) {
