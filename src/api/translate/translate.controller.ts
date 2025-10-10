@@ -16,7 +16,6 @@ export class TranslateController {
         text as string,
         target as string
       )
-      console.log('translated', translated)
 
       res.json(translated)
     } catch (err: any) {
