@@ -21,41 +21,35 @@ export const protect = async (
   res: Response,
   next: NextFunction
 ) => {
-  let token
+  let token: string | undefined
 
   const loginToken = req.cookies.loginToken
+  const authHeader = req.headers.authorization
 
-  if (
-    // req.headers.authorization &&
-    // req.headers.authorization.startsWith('Bearer')
-    loginToken
-  ) {
-    try {
-      // Get token from header
-      // token = req.headers.authorization.split(' ')[1]
-      token = loginToken
-      // Verify token
-
-      const decoded = jwt.verify(
-        token,
-        process.env.JWT_SECRET as string
-      ) as JWTPayload
-
-      if (decoded.isGuest)
-        res.status(401).json({ message: 'Not authorized, token failed' })
-
-      // Add user from payload
-      req.user = decoded
-
-      next()
-    } catch (error) {
-      res.status(401).json({ message: 'Not authorized, token failed' })
-      return
-    }
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1]
+  } else if (loginToken) {
+    token = loginToken
   }
 
   if (!token) {
     res.status(401).json({ message: 'Not authorized, no token' })
+    return
+  }
+
+  try {
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET as string
+    ) as JWTPayload
+
+    if (decoded.isGuest)
+      return res.status(401).json({ message: 'Not authorized, token failed' })
+
+    req.user = decoded
+    next()
+  } catch (error) {
+    res.status(401).json({ message: 'Not authorized, token failed' })
     return
   }
 }

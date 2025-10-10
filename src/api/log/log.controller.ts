@@ -28,6 +28,7 @@ export class LogController {
     res: Response
   ) {
     try {
+      console.log('addLog', req.body)
       const log = req.body
 
       // log.createdBy = req.user?._id as string

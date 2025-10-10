@@ -29,20 +29,47 @@ app.use(cookieParser())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
+// CORS for Web (dev/prod) and Capacitor/Ionic native apps
+const allowedOrigins = [
+  'http://127.0.0.1:3000',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  'http://localhost:5173',
+  'http://127.0.0.1:8100',
+  'http://localhost:8100',
+  'capacitor://localhost',
+  'ionic://localhost',
+  'http://127.0.0.1:3030',
+  'http://10.0.2.2:8100',
+  'http://10.0.2.2:3000',
+  'http://10.0.2.2:5173',
+  'http://10.0.2.2:3030',
+  'http://10.0.2.2:3000',
+]
+
+const corsOptions = {
+  origin: (
+    origin: string | undefined,
+    callback: (err: Error | null, allow?: boolean) => void
+  ) => {
+    // Allow server-to-server or tools like curl/postman (no origin)
+    if (!origin) return callback(null, true)
+    if (allowedOrigins.includes(origin)) return callback(null, true)
+    // Allow Capacitor/Ionic custom URL schemes with any host
+    if (/^capacitor:\/\//.test(origin) || /^ionic:\/\//.test(origin))
+      return callback(null, true)
+    callback(new Error('Not allowed by CORS'))
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+}
+
+app.use(cors(corsOptions))
+
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../public')))
   // app.use(express.static(path.resolve('public')))
-} else {
-  const corsOptions = {
-    origin: [
-      'http://127.0.0.1:3000',
-      'http://localhost:3000',
-      'http://127.0.0.1:5173',
-      'http://localhost:5173',
-    ],
-    credentials: true,
-  }
-  app.use(cors(corsOptions))
 }
 
 app.all('*', setupAsyncLocalStorage)

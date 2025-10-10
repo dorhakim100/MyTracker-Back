@@ -5,10 +5,24 @@ import { logger } from '../logger.service'
 export const setupSocketAPI = (server: HttpServer) => {
   const io = new Server(server, {
     cors: {
-      origin:
-        process.env.NODE_ENV === 'production'
-          ? false
-          : ['http://127.0.0.1:3000', 'http://localhost:3000'],
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true)
+        const allowed = [
+          'http://127.0.0.1:3000',
+          'http://localhost:3000',
+          'http://127.0.0.1:5173',
+          'http://localhost:5173',
+          'http://127.0.0.1:8100',
+          'http://localhost:8100',
+          'capacitor://localhost',
+          'ionic://localhost',
+        ]
+        if (allowed.includes(origin)) return callback(null, true)
+        if (/^capacitor:\/\//.test(origin) || /^ionic:\/\//.test(origin))
+          return callback(null, true)
+        if (process.env.NODE_ENV === 'production') return callback(null, true)
+        callback(new Error('Not allowed by Socket.IO CORS'))
+      },
       credentials: true,
     },
   })
