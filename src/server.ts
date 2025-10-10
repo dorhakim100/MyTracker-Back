@@ -20,6 +20,9 @@ import { logger } from './services/logger.service'
 
 dotenv.config()
 
+// Translate
+import { translateRoutes } from './api/translate/translate.routes'
+
 const app = express()
 const server = http.createServer(app)
 
@@ -55,6 +58,7 @@ app.use('/api/day', dayRoutes)
 app.use('/api/meal', mealRoutes)
 app.use('/api/weight', weightRoutes)
 app.use('/api/goal', goalRoutes)
+app.use('/api/translate', translateRoutes)
 
 // Setup Socket.IO
 setupSocketAPI(server)
