@@ -98,4 +98,13 @@ export class GoalService {
       throw err
     }
   }
+
+  static async removeAllByUserId(userId: string) {
+    try {
+      await GoalModel.deleteMany({ userId })
+    } catch (err) {
+      logger.error(`GoalService.removeAllByUserId failed for ${userId}`, err)
+      throw err
+    }
+  }
 }

@@ -3,6 +3,9 @@ import mongoose from 'mongoose'
 import { User, IUser } from './user.model'
 import { logger } from '../../services/logger.service'
 import { Goal } from '@/types/Goal/Goal'
+import { GoalService } from '../goal/goal.service'
+import { LogService } from '../log/log.service'
+import { WeightService } from '../weight/weight.service'
 
 export class UserService {
   static async query(filterBy = {}) {
@@ -297,6 +300,11 @@ export class UserService {
   static async remove(userId: string) {
     try {
       await User.findByIdAndDelete(userId)
+
+      // no need to await these
+      LogService.removeAllByUserId(userId)
+      GoalService.removeAllByUserId(userId)
+      WeightService.removeAllByUserId(userId)
     } catch (err) {
       logger.error(`Failed to remove user ${userId}`, err)
       throw err

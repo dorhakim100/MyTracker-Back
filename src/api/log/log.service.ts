@@ -56,4 +56,13 @@ export class LogService {
       throw err
     }
   }
+
+  static async removeAllByUserId(userId: string) {
+    try {
+      await Log.deleteMany({ createdBy: userId })
+    } catch (err) {
+      logger.error(`Failed to remove all logs by user ${userId}`, err)
+      throw err
+    }
+  }
 }

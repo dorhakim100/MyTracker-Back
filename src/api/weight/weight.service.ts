@@ -72,4 +72,12 @@ export class WeightService {
       throw err
     }
   }
+  static async removeAllByUserId(userId: string) {
+    try {
+      await Weight.deleteMany({ userId })
+    } catch (err) {
+      logger.error(`WeightService.removeAllByUserId failed for ${userId}`, err)
+      throw err
+    }
+  }
 }
