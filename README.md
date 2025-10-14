@@ -1,92 +1,93 @@
-# TypeScript Express Backend Starter
+## MyTracker Backend (TypeScript, Express, MongoDB)
 
-A modern, well-structured backend starter template using TypeScript, Express, MongoDB, and Socket.IO.
+Backend API for MyTracker: authentication, user management, daily logs, meals, goals, weights, and translation utilities.
 
-## Features
+### Features
 
-- 🚀 TypeScript for type safety
-- 🔐 JWT Authentication
-- 📦 MongoDB with Mongoose
-- 🔌 Socket.IO integration
-- 🎯 Clean Architecture (Routes, Controllers, Services)
-- ⚡️ Express middleware for error handling and authentication
-- 🔍 Environment variable configuration
-- 🛠 ESLint for code quality
+- **TypeScript** with clean layering (routes, controllers, services)
+- **MongoDB + Mongoose** data models
+- **Cookie-based JWT auth** (`loginToken` HTTP-only cookie)
+- **Environment-driven config** and production static serving
+- **ESLint** and build pipeline with `tsc`
 
-## Project Structure
+### Project Structure
 
 ```
 src/
 ├── api/
-│   └── users/
-│       ├── user.controller.ts
-│       ├── user.model.ts
-│       ├── user.routes.ts
-│       └── user.service.ts
-├── middleware/
-│   ├── auth.middleware.ts
-│   ├── error.middleware.ts
-│   └── notFound.middleware.ts
-├── services/
-│   └── socket/
-│       └── socket.service.ts
-└── server.ts
+│   ├── auth/       # login, signup, logout
+│   ├── user/       # users CRUD and helpers
+│   ├── log/        # logs CRUD
+│   ├── day/        # per-day data
+│   ├── meal/       # meals catalog + CRUD
+│   ├── weight/     # weights CRUD
+│   ├── goal/       # goals CRUD + selection
+│   └── translate/  # Google Translate wrapper with LRU cache
+├── middleware/     # auth, ALS, errors
+├── services/       # logger, socket, utils
+└── server.ts       # app bootstrap, routes, DB, static
 ```
-
-## Getting Started
-
-1. Clone the repository
-2. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-3. Create a `.env` file in the root directory with the following variables:
-
-   ```
-   PORT=3000
-   MONGODB_URI=mongodb://localhost:27017/backend-starter
-   JWT_SECRET=your-secret-key
-   JWT_EXPIRES_IN=7d
-   NODE_ENV=development
-   ```
-
-4. Start the development server:
-   ```bash
-   npm run dev
-   ```
 
 ## API Endpoints
 
-### Users
+Base path: `/api/*`
 
-- POST `/api/users/register` - Register a new user
-- POST `/api/users/login` - Login user
-- GET `/api/users/profile` - Get user profile (protected)
-- PUT `/api/users/profile` - Update user profile (protected)
-- DELETE `/api/users/profile` - Delete user profile (protected)
+### Auth (`/api/auth`)
 
-## Socket.IO Events
+- `POST /login` – Body: `{ email, password }`. Sets `loginToken` cookie and returns the user.
+- `POST /signup` – Body: `{ email, password, fullname }`. Sets `loginToken` and returns the created user (+ initial day info).
+- `POST /logout` – Clears `loginToken` cookie.
 
-- `connection` - Client connected
-- `disconnect` - Client disconnected
-- `join_room` - Join a room
-- `leave_room` - Leave a room
-- `send_message` - Send a message to a room
-- `receive_message` - Receive a message in a room
+### User (`/api/user`)
 
-## Scripts
+- `GET /` – List users (protected).
+- `GET /remember/:id` – Get minimal details for remember flow (public).
+- `GET /:id` – Get user by id (protected).
+- `PUT /:id` – Update user (protected).
+- `DELETE /:id` – Delete user (protected).
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm start` - Start production server
-- `npm run lint` - Run ESLint
+### Log (`/api/log`)
 
-## Contributing
+- `GET /` – List logs (public).
+- `GET /:id` – Get log (public).
+- `POST /` – Create log (auth required).
+- `PUT /:id` – Update log (auth required).
+- `DELETE /:id` – Delete log (auth required).
 
-Feel free to submit issues and pull requests.
+### Day (`/api/day`)
 
-## License
+- `GET /` – Get current day for logged-in user (auth required).
+- `POST /` – Upsert current day (auth required).
+- `GET /:id` – Get day by id (auth required).
+- `PUT /:id` – Update day (auth required).
+- `GET /user/:userId` – List days by user (auth required).
+- `GET /by-date/:userId` – Get day by date (auth required).
 
-MIT
+### Meal (`/api/meal`)
+
+- `GET /` – List meals (public).
+- `GET /:id` – Get meal (public).
+- `POST /` – Create meal (auth required).
+- `PUT /:id` – Update meal (auth required).
+- `DELETE /:id` – Delete meal (auth required).
+
+### Weight (`/api/weight`)
+
+- `GET /` – List weights (auth required).
+- `GET /:id` – Get weight (auth required).
+- `POST /` – Create weight (auth required).
+- `PUT /:id` – Update weight (auth required).
+- `DELETE /:id` – Delete weight (auth required).
+
+### Goal (`/api/goal`)
+
+- `GET /user/:userId` – List goals by user (auth required).
+- `GET /:id` – Get goal (auth required).
+- `PUT /select` – Select active goal (auth required).
+- `POST /` – Create goal (auth required).
+- `PUT /:id` – Update goal (auth required).
+- `DELETE /:id` – Delete goal (auth required).
+
+### Translate (`/api/translate`)
+
+- `GET /?q=TEXT&target=en` – Translate `q` to `target` (auth required). Returns the translated string. Responses are cached with an LRU cache.
