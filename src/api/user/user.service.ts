@@ -221,9 +221,11 @@ export class UserService {
         {
           $lookup: {
             from: 'weights',
-            let: { ids: '$weightsObjectIds' },
+            // Define uid as the user's ObjectId as a string
+            let: { uid: { $toString: '$_id' } },
             pipeline: [
-              { $match: { $expr: { $in: ['$_id', '$$ids'] } } },
+              // Match let variable uid with userId, must be $expr and $eq
+              { $match: { $expr: { $eq: ['$userId', '$$uid'] } } },
               { $sort: { createdAt: -1 } },
               { $limit: 1 },
             ],
@@ -238,6 +240,7 @@ export class UserService {
             mealsIds: 0,
             weightsIds: 0,
             _lastWeight: 0,
+            'lastWeight.userId': 0,
           },
         },
         {
@@ -276,8 +279,6 @@ export class UserService {
           },
         },
       ])
-
-      console.log('user', user)
 
       return user || null
     } catch (err) {
