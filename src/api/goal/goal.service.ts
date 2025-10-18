@@ -78,7 +78,6 @@ export class GoalService {
         isSelected: true,
         updatedAt: Date.now(),
       })
-      console.log(updated)
 
       return updated
     } catch (err) {

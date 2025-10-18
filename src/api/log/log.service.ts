@@ -26,7 +26,6 @@ export class LogService {
   static async add(log: Partial<ILog>) {
     try {
       if (log.itemId === '') log.itemId = `custom-log`
-      console.log('log', log)
 
       const addedLog = await Log.create(log)
       return addedLog

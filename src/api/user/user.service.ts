@@ -317,8 +317,6 @@ export class UserService {
       delete userToUpdate.goals
       delete userToUpdate.currGoal
 
-      console.log('userToUpdate', userToUpdate)
-
       const user = await User.findByIdAndUpdate(userId, userToUpdate, {
         new: true,
       })
