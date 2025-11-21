@@ -13,6 +13,7 @@ import { dayRoutes } from './api/day/day.routes'
 import { mealRoutes } from './api/meal/meal.routes'
 import { weightRoutes } from './api/weight/weight.routes'
 import { goalRoutes } from './api/goal/goal.routes'
+import { workoutRoutes } from './api/workout/workout.routes'
 
 import { setupSocketAPI } from './services/socket/socket.service'
 import { setupAsyncLocalStorage } from './middleware/setupAls.middleware'
@@ -58,6 +59,8 @@ app.use('/api/day', dayRoutes)
 app.use('/api/meal', mealRoutes)
 app.use('/api/weight', weightRoutes)
 app.use('/api/goal', goalRoutes)
+app.use('/api/workout', workoutRoutes)
+
 app.use('/api/translate', translateRoutes)
 
 // Setup Socket.IO
