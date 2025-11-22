@@ -6,6 +6,7 @@ export interface ISession extends mongoose.Document {
   date: string
   workoutId: string | null
   exercises: Exercise[]
+  setsIds: string[]
 }
 
 const sessionSchema = new mongoose.Schema(
@@ -27,6 +28,11 @@ const sessionSchema = new mongoose.Schema(
     },
     exercises: {
       type: [Object],
+      required: true,
+      default: [],
+    },
+    setsIds: {
+      type: [String],
       required: true,
       default: [],
     },

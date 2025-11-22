@@ -4,36 +4,95 @@ import { logger } from '../../services/logger.service'
 import { getDateFromISO } from '../../services/utils'
 
 export class SessionService {
+  private static getWorkoutLookupPipeline() {
+    return [
+      {
+        $addFields: {
+          workoutObjectId: {
+            $cond: [
+              { $eq: [{ $type: '$workoutId' }, 'string'] },
+              { $toObjectId: '$workoutId' },
+              '$workoutId',
+            ],
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: 'workouts',
+          localField: 'workoutObjectId',
+          foreignField: '_id',
+          as: 'workout',
+        },
+      },
+      {
+        $addFields: {
+          workout: { $arrayElemAt: ['$workout', 0] },
+        },
+      },
+    ]
+  }
+
+  private static getSetsLookupPipeline() {
+    return [
+      {
+        $addFields: {
+          setObjectIds: {
+            $map: {
+              input: { $ifNull: ['$setsIds', []] },
+              as: 'id',
+              in: {
+                $cond: [
+                  { $eq: [{ $type: '$$id' }, 'string'] },
+                  { $toObjectId: '$$id' },
+                  {
+                    $cond: [
+                      { $eq: [{ $type: '$$id' }, 'objectId'] },
+                      '$$id',
+                      null,
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+      {
+        $addFields: {
+          setObjectIds: {
+            $filter: {
+              input: '$setObjectIds',
+              as: 'id',
+              cond: { $ne: ['$$id', null] },
+            },
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: 'sets',
+          localField: 'setObjectIds',
+          foreignField: '_id',
+          as: 'sets',
+        },
+      },
+    ]
+  }
+
+  private static getCommonProjection() {
+    return [{ $project: { workoutObjectId: 0, setsIds: 0, setObjectIds: 0 } }]
+  }
   static async getById(sessionId: string): Promise<ISession | null> {
     try {
       const session = await Session.aggregate([
         { $match: { _id: new mongoose.Types.ObjectId(sessionId) } },
-        {
-          $addFields: {
-            workoutObjectId: {
-              $cond: [
-                { $eq: [{ $type: '$workoutId' }, 'string'] },
-                { $toObjectId: '$workoutId' },
-                '$workoutId',
-              ],
-            },
-          },
-        },
-        {
-          $lookup: {
-            from: 'workouts',
-            localField: 'workoutObjectId',
-            foreignField: '_id',
-            as: 'workout',
-          },
-        },
-        {
-          $addFields: {
-            workout: { $arrayElemAt: ['$workout', 0] },
-          },
-        },
-        { $project: { workoutObjectId: 0 } },
+        ...this.getWorkoutLookupPipeline(),
+        ...this.getSetsLookupPipeline(),
+        ...this.getCommonProjection(),
       ])
+
+      console.log(session[0])
 
       return session[0] || null
     } catch (err) {
@@ -51,31 +110,9 @@ export class SessionService {
 
       const sessions = await Session.aggregate([
         { $match: { userId, date: dateFromISO } },
-        {
-          $addFields: {
-            workoutObjectId: {
-              $cond: [
-                { $eq: [{ $type: '$workoutId' }, 'string'] },
-                { $toObjectId: '$workoutId' },
-                '$workoutId',
-              ],
-            },
-          },
-        },
-        {
-          $lookup: {
-            from: 'workouts',
-            localField: 'workoutObjectId',
-            foreignField: '_id',
-            as: 'workout',
-          },
-        },
-        {
-          $addFields: {
-            workout: { $arrayElemAt: ['$workout', 0] },
-          },
-        },
-        { $project: { workoutObjectId: 0 } },
+        ...this.getWorkoutLookupPipeline(),
+        ...this.getSetsLookupPipeline(),
+        ...this.getCommonProjection(),
         { $sort: { createdAt: -1 } },
       ])
 
@@ -99,31 +136,9 @@ export class SessionService {
 
       const sessions = await Session.aggregate([
         { $match: matchQuery },
-        {
-          $addFields: {
-            workoutObjectId: {
-              $cond: [
-                { $eq: [{ $type: '$workoutId' }, 'string'] },
-                { $toObjectId: '$workoutId' },
-                '$workoutId',
-              ],
-            },
-          },
-        },
-        {
-          $lookup: {
-            from: 'workouts',
-            localField: 'workoutObjectId',
-            foreignField: '_id',
-            as: 'workout',
-          },
-        },
-        {
-          $addFields: {
-            workout: { $arrayElemAt: ['$workout', 0] },
-          },
-        },
-        { $project: { workoutObjectId: 0 } },
+        ...this.getWorkoutLookupPipeline(),
+        ...this.getSetsLookupPipeline(),
+        ...this.getCommonProjection(),
         { $sort: { date: -1, createdAt: -1 } },
         { $limit: limit },
       ])
@@ -139,31 +154,9 @@ export class SessionService {
     try {
       const sessions = await Session.aggregate([
         { $match: filterBy },
-        {
-          $addFields: {
-            workoutObjectId: {
-              $cond: [
-                { $eq: [{ $type: '$workoutId' }, 'string'] },
-                { $toObjectId: '$workoutId' },
-                '$workoutId',
-              ],
-            },
-          },
-        },
-        {
-          $lookup: {
-            from: 'workouts',
-            localField: 'workoutObjectId',
-            foreignField: '_id',
-            as: 'workout',
-          },
-        },
-        {
-          $addFields: {
-            workout: { $arrayElemAt: ['$workout', 0] },
-          },
-        },
-        { $project: { workoutObjectId: 0 } },
+        ...this.getWorkoutLookupPipeline(),
+        ...this.getSetsLookupPipeline(),
+        ...this.getCommonProjection(),
         { $sort: { date: -1, createdAt: -1 } },
       ])
 
@@ -179,8 +172,9 @@ export class SessionService {
       if (session.date) {
         session.date = getDateFromISO(session.date)
       }
-      console.log('session', session)
+
       const addedSession = await Session.create(session)
+
       return addedSession
     } catch (err) {
       logger.error('SessionService.add failed', err)
@@ -197,11 +191,9 @@ export class SessionService {
         sessionToUpdate.date = getDateFromISO(sessionToUpdate.date)
       }
 
-      const session = await Session.findByIdAndUpdate(
-        sessionId,
-        sessionToUpdate,
-        { new: true }
-      )
+      await Session.findByIdAndUpdate(sessionId, sessionToUpdate, { new: true })
+
+      const session = await this.getById(sessionId)
 
       return session
     } catch (err) {
