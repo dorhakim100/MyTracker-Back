@@ -6,6 +6,7 @@ export interface IWorkout extends mongoose.Document {
   name: string
   exercises: Exercise[]
   muscleGroups: string[]
+  isActive: boolean
 }
 
 const workoutSchema = new mongoose.Schema(
@@ -26,6 +27,11 @@ const workoutSchema = new mongoose.Schema(
     muscleGroups: {
       type: [String],
       required: true,
+    },
+    isActive: {
+      type: Boolean,
+
+      default: true,
     },
   },
   {
