@@ -5,6 +5,7 @@ export interface IInstructions extends mongoose.Document {
   workoutId: string
   exercises: ExerciseInstructions[]
   weekNumber: number
+  isDone: boolean
 }
 
 const instructionsSchema = new mongoose.Schema(
@@ -21,6 +22,10 @@ const instructionsSchema = new mongoose.Schema(
     weekNumber: {
       type: Number,
       required: true,
+    },
+    isDone: {
+      type: Boolean,
+      default: false,
     },
   },
   {

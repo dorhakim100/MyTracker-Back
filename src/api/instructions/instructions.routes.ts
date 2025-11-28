@@ -5,6 +5,11 @@ import { requireAuth } from '../../middleware/auth.middleware'
 const router = Router()
 
 router.get('/', InstructionsController.getInstructions)
+router.get('/weekNumberDone', InstructionsController.getWeekNumberDone)
+router.get(
+  '/workout/:workoutId',
+  InstructionsController.getInstructionsByWorkoutId
+)
 router.get('/:id', InstructionsController.getInstruction)
 router.post('/', requireAuth, InstructionsController.addInstruction)
 router.put('/:id', requireAuth, InstructionsController.updateInstruction)

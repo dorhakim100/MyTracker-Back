@@ -13,6 +13,21 @@ export class InstructionsController {
     }
   }
 
+  static async getInstructionsByWorkoutId(req: Request, res: Response) {
+    try {
+      const filter = {
+        workoutId: req.params.workoutId || '',
+        weekNumber: Number(req.query.weekNumber) || 1,
+        // forUserId: (req.query.forUserId as string) || '',
+      }
+
+      const instructions = await InstructionsService.getByWorkoutId(filter)
+      res.json(instructions)
+    } catch (err: any) {
+      logger.error('Failed to get instructions by workout id', err)
+      res.status(500).send({ err: 'Failed to get instructions by workout id' })
+    }
+  }
   static async getInstruction(req: Request, res: Response) {
     try {
       const instruction = await InstructionsService.getById(req.params.id)
@@ -28,12 +43,15 @@ export class InstructionsController {
 
   static async addInstruction(req: Request, res: Response) {
     try {
-      const instruction = req.body
-      const addedInstruction = await InstructionsService.add(instruction)
-      res.json(addedInstruction)
+      const instructions = req.body
+
+      delete instructions._id
+      console.log('instructions', instructions)
+      const addedInstructions = await InstructionsService.add(instructions)
+      res.json(addedInstructions)
     } catch (err: any) {
-      logger.error('Failed to add instruction', err)
-      res.status(500).send({ err: 'Failed to add instruction' })
+      logger.error('Failed to add instructions', err)
+      res.status(500).send({ err: 'Failed to add instructions' })
     }
   }
 
@@ -64,6 +82,20 @@ export class InstructionsController {
     } catch (err: any) {
       logger.error('Failed to delete instruction', err)
       res.status(500).send({ err: 'Failed to delete instruction' })
+    }
+  }
+
+  static async getWeekNumberDone(req: Request, res: Response) {
+    try {
+      const workoutId = req.query.workoutId
+
+      const weekNumberDone = await InstructionsService.getWeekNumberDone(
+        workoutId as string
+      )
+      res.send(weekNumberDone)
+    } catch (err: any) {
+      logger.error('Failed to get week number done', err)
+      res.status(500).send({ err: 'Failed to get week number done' })
     }
   }
 }

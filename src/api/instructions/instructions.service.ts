@@ -1,5 +1,6 @@
 import { Instructions, IInstructions } from './instructions.model'
 import { logger } from '../../services/logger.service'
+import { WorkoutService } from '../workout/workout.service'
 
 export class InstructionsService {
   static async query(filterBy = {}) {
@@ -8,6 +9,40 @@ export class InstructionsService {
       return instructions
     } catch (err) {
       logger.error('Failed to query instructions', err)
+      throw err
+    }
+  }
+
+  static async getByWorkoutId(filter: {
+    workoutId: string
+    weekNumber: number
+    // forUserId: string
+  }) {
+    try {
+      let instructions
+      instructions = await Instructions.findOne({ ...filter })
+      if (!instructions) {
+        instructions = await Instructions.findOne({
+          workoutId: filter.workoutId,
+        }).sort({ weekNumber: -1 })
+        if (!instructions) {
+          return await Instructions.create({ ...filter, exercises: [] })
+        } else {
+          // Convert Mongoose document to plain object and exclude _id
+          const instructionsObj = instructions.toObject()
+          const { _id, ...instructionsWithoutId } = instructionsObj
+          return await Instructions.create({
+            ...instructionsWithoutId,
+            weekNumber: filter.weekNumber,
+          })
+        }
+      }
+      return instructions
+    } catch (err) {
+      logger.error(
+        `Failed to get instructions by workout id ${filter.workoutId}`,
+        err
+      )
       throw err
     }
   }
@@ -56,6 +91,24 @@ export class InstructionsService {
       await Instructions.findByIdAndDelete(instructionId)
     } catch (err) {
       logger.error(`Failed to remove instruction ${instructionId}`, err)
+      throw err
+    }
+  }
+
+  static async getWeekNumberDone(workoutId: string) {
+    try {
+      const allInstructions = await Instructions.find({ workoutId })
+
+      const weekNumberDone = allInstructions.map((instruction) => {
+        return {
+          weekNumber: instruction.weekNumber,
+          isDone: instruction.isDone,
+        }
+      })
+      return weekNumberDone
+      // return weekNumberDone
+    } catch (err) {
+      logger.error(`Failed to get week number done ${workoutId}`, err)
       throw err
     }
   }
