@@ -46,6 +46,57 @@ export class InstructionsService {
       throw err
     }
   }
+  static async getNextInstructionsByWorkoutIdAndUpdate(filter: {
+    workoutId: string
+    // forUserId: string
+  }) {
+    try {
+      const instruction = await Instructions.findOne({
+        ...filter,
+        isDone: false,
+      })
+
+      if (!instruction) {
+        return null
+      }
+
+      const updatedInstruction = await Instructions.findByIdAndUpdate(
+        instruction._id,
+        { isDone: true }
+      )
+
+      return updatedInstruction
+    } catch (err) {
+      logger.error(
+        `Failed to get instructions by workout id ${filter.workoutId}`,
+        err
+      )
+      throw err
+    }
+  }
+  static async getNextInstructionsByWorkoutId(filter: {
+    workoutId: string
+    // forUserId: string
+  }) {
+    try {
+      const instruction = await Instructions.findOne({
+        ...filter,
+        isDone: false,
+      })
+
+      if (!instruction) {
+        return null
+      }
+
+      return instruction
+    } catch (err) {
+      logger.error(
+        `Failed to get instructions by workout id ${filter.workoutId}`,
+        err
+      )
+      throw err
+    }
+  }
 
   static async getById(instructionId: string) {
     try {

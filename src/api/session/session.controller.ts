@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { SessionService } from './session.service'
 import { logger } from '../../services/logger.service'
+import { log } from 'node:console'
 
 export class SessionController {
   static async get(req: Request, res: Response) {
@@ -98,6 +99,21 @@ export class SessionController {
     } catch (err: any) {
       logger.error('Failed to delete session', err)
       res.status(500).send({ err: 'Failed to delete session' })
+    }
+  }
+
+  static async playWorkout(req: Request, res: Response) {
+    try {
+      const { workoutId } = req.body
+
+      const session = await SessionService.playWorkout(req.params.id, workoutId)
+
+      console.log('session', session)
+
+      res.json(session)
+    } catch (err: any) {
+      logger.error('Failed to play workout', err)
+      res.status(500).send({ err: 'Failed to play workout' })
     }
   }
 }

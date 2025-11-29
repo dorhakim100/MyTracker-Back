@@ -2,6 +2,7 @@ import { Session, ISession } from './session.model'
 import mongoose from 'mongoose'
 import { logger } from '../../services/logger.service'
 import { getDateFromISO } from '../../services/utils'
+import { InstructionsService } from '../instructions/instructions.service'
 
 export class SessionService {
   private static getWorkoutLookupPipeline() {
@@ -32,69 +33,106 @@ export class SessionService {
       },
     ]
   }
-
-  private static getSetsLookupPipeline() {
+  private static getInstructionsLookupPipeline() {
     return [
       {
         $addFields: {
-          setObjectIds: {
-            $map: {
-              input: { $ifNull: ['$setsIds', []] },
-              as: 'id',
-              in: {
-                $cond: [
-                  { $eq: [{ $type: '$$id' }, 'string'] },
-                  { $toObjectId: '$$id' },
-                  {
-                    $cond: [
-                      { $eq: [{ $type: '$$id' }, 'objectId'] },
-                      '$$id',
-                      null,
-                    ],
-                  },
-                ],
-              },
-            },
-          },
-        },
-      },
-      {
-        $addFields: {
-          setObjectIds: {
-            $filter: {
-              input: '$setObjectIds',
-              as: 'id',
-              cond: { $ne: ['$$id', null] },
-            },
+          instructionsObjectId: {
+            $cond: [
+              { $eq: [{ $type: '$instructionsId' }, 'string'] },
+              { $toObjectId: '$instructionsId' },
+              '$instructionsId',
+            ],
           },
         },
       },
       {
         $lookup: {
-          from: 'sets',
-          localField: 'setObjectIds',
+          from: 'instructions',
+          localField: 'instructionsObjectId',
           foreignField: '_id',
-          as: 'sets',
+          as: 'instructions',
+        },
+      },
+      {
+        $addFields: {
+          instructions: { $arrayElemAt: ['$instructions', 0] },
         },
       },
     ]
   }
 
   private static getCommonProjection() {
-    return [{ $project: { workoutObjectId: 0, setsIds: 0, setObjectIds: 0 } }]
+    return [
+      {
+        $project: {
+          workoutObjectId: 0,
+          instructionsObjectId: 0,
+          setsIds: 0,
+          setObjectIds: 0,
+        },
+      },
+    ]
   }
   static async getById(sessionId: string): Promise<ISession | null> {
     try {
       const session = await Session.aggregate([
         { $match: { _id: new mongoose.Types.ObjectId(sessionId) } },
         ...this.getWorkoutLookupPipeline(),
-        ...this.getSetsLookupPipeline(),
+        ...this.getInstructionsLookupPipeline(),
         ...this.getCommonProjection(),
       ])
 
-      console.log(session[0])
+      const instructions =
+        await InstructionsService.getNextInstructionsByWorkoutId({
+          workoutId: session[0].workoutId,
+        })
 
-      return session[0] || null
+      const sessionToSend = {
+        ...session[0],
+        instructions,
+      }
+
+      return sessionToSend || null
+    } catch (err) {
+      logger.error(`SessionService.getById failed for ${sessionId}`, err)
+      throw err
+    }
+  }
+  static async playWorkout(
+    sessionId: string,
+    workoutId: string
+  ): Promise<ISession | null> {
+    try {
+      const session = await Session.aggregate([
+        { $match: { _id: new mongoose.Types.ObjectId(sessionId) } },
+        ...this.getWorkoutLookupPipeline(),
+        ...this.getCommonProjection(),
+      ])
+
+      const instructions =
+        await InstructionsService.getNextInstructionsByWorkoutIdAndUpdate({
+          workoutId,
+        })
+
+      const instructionsId = instructions?._id
+
+      const updatedSession = await Session.findByIdAndUpdate(
+        sessionId,
+        { workoutId, instructionsId },
+        { new: true }
+      )
+
+      if (!updatedSession) {
+        return null
+      }
+
+      const sessionToSend = {
+        ...updatedSession.toObject(),
+        instructions,
+      }
+
+      return (sessionToSend as unknown as ISession) || null
     } catch (err) {
       logger.error(`SessionService.getById failed for ${sessionId}`, err)
       throw err
@@ -104,19 +142,42 @@ export class SessionService {
   static async getByUserAndDate(
     userId: string,
     date: string
-  ): Promise<ISession[]> {
+  ): Promise<ISession> {
     try {
       const dateFromISO = getDateFromISO(date)
 
       const sessions = await Session.aggregate([
         { $match: { userId, date: dateFromISO } },
         ...this.getWorkoutLookupPipeline(),
-        ...this.getSetsLookupPipeline(),
+        ...this.getInstructionsLookupPipeline(),
         ...this.getCommonProjection(),
         { $sort: { createdAt: -1 } },
       ])
 
-      return sessions[0] || null
+      const sessionResult = sessions[0]
+
+      if (!sessionResult) {
+        const newSession = await this.add({ userId, date })
+
+        return newSession || null
+      }
+
+      if (!sessionResult.workoutId) {
+        return sessionResult || null
+      }
+
+      if (sessionResult.instructions) return sessionResult || null
+      const instructions =
+        await InstructionsService.getNextInstructionsByWorkoutId({
+          workoutId: sessions[0].workoutId,
+        })
+
+      const sessionToSend = {
+        ...sessionResult,
+        instructions,
+      }
+
+      return sessionToSend || null
     } catch (err) {
       logger.error(
         `SessionService.getByUserAndDate failed for user ${userId} date ${date}`,
@@ -137,7 +198,6 @@ export class SessionService {
       const sessions = await Session.aggregate([
         { $match: matchQuery },
         ...this.getWorkoutLookupPipeline(),
-        ...this.getSetsLookupPipeline(),
         ...this.getCommonProjection(),
         { $sort: { date: -1, createdAt: -1 } },
         { $limit: limit },
@@ -155,7 +215,6 @@ export class SessionService {
       const sessions = await Session.aggregate([
         { $match: filterBy },
         ...this.getWorkoutLookupPipeline(),
-        ...this.getSetsLookupPipeline(),
         ...this.getCommonProjection(),
         { $sort: { date: -1, createdAt: -1 } },
       ])
