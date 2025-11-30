@@ -46,7 +46,6 @@ export class InstructionsController {
       const instructions = req.body
 
       delete instructions._id
-      console.log('instructions', instructions)
       const addedInstructions = await InstructionsService.add(instructions)
       res.json(addedInstructions)
     } catch (err: any) {

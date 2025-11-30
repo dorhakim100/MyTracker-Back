@@ -30,10 +30,6 @@ export class WorkoutController {
     try {
       const workout = req.body
 
-      console.log('workout', workout)
-
-      logger.info('Adding workout', workout)
-
       // workout.createdBy = req.user?._id as string
       const addedWorkout = await WorkoutService.add(workout)
       res.json(addedWorkout)

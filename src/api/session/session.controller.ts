@@ -15,7 +15,6 @@ export class SessionController {
       }
 
       const session = await SessionService.getByUserAndDate(userId, date)
-      console.log(session)
 
       if (!session) {
         sessionToSend = await SessionService.add({ userId, date })
@@ -107,8 +106,6 @@ export class SessionController {
       const { workoutId } = req.body
 
       const session = await SessionService.playWorkout(req.params.id, workoutId)
-
-      console.log('session', session)
 
       res.json(session)
     } catch (err: any) {
