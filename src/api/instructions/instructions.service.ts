@@ -156,6 +156,7 @@ export class InstructionsService {
           isDone: instruction.isDone,
         }
       })
+
       return weekNumberDone
       // return weekNumberDone
     } catch (err) {

@@ -1,10 +1,15 @@
 import { Workout, IWorkout } from './workout.model'
+import mongoose from 'mongoose'
 import { logger } from '../../services/logger.service'
 
 export class WorkoutService {
   static async query(filterBy = {}) {
     try {
-      const workouts = await Workout.find(filterBy)
+      const workouts = await Workout.aggregate([
+        { $match: filterBy },
+        ...this.getIsNewInstructionsPipeline(),
+      ])
+
       return workouts
     } catch (err) {
       logger.error('Failed to query workouts', err)
@@ -14,8 +19,11 @@ export class WorkoutService {
 
   static async getById(workoutId: string) {
     try {
-      const workout = await Workout.findById(workoutId)
-      return workout
+      const workouts = await Workout.aggregate([
+        { $match: { _id: new mongoose.Types.ObjectId(workoutId) } },
+        ...this.getIsNewInstructionsPipeline(),
+      ])
+      return workouts[0] || null
     } catch (err) {
       logger.error(`Failed to get workout ${workoutId}`, err)
       throw err
@@ -55,5 +63,55 @@ export class WorkoutService {
       logger.error(`Failed to remove workout ${workoutId}`, err)
       throw err
     }
+  }
+
+  private static getIsNewInstructionsPipeline() {
+    return [
+      {
+        $addFields: {
+          workoutIdString: {
+            $toString: '$_id',
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: 'instructions',
+          localField: 'workoutIdString',
+          foreignField: 'workoutId',
+          as: 'instructions',
+        },
+      },
+      {
+        $addFields: {
+          isNewInstructions: {
+            $cond: [
+              {
+                $gt: [
+                  {
+                    $size: {
+                      $filter: {
+                        input: '$instructions',
+                        as: 'instruction',
+                        cond: { $eq: ['$$instruction.isDone', false] },
+                      },
+                    },
+                  },
+                  0,
+                ],
+              },
+              true,
+              false,
+            ],
+          },
+        },
+      },
+      {
+        $project: {
+          workoutIdString: 0,
+          instructions: 0,
+        },
+      },
+    ]
   }
 }
