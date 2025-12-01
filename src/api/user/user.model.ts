@@ -17,6 +17,8 @@ export interface IUser extends mongoose.Document {
   mealsIds: string[]
   weightsIds: string[]
   goalsIds: string[]
+  isTrainer: boolean
+  trainersIds?: string[]
 }
 
 interface UserDetails {
@@ -85,6 +87,10 @@ const userSchema = new mongoose.Schema(
     goalsIds: {
       type: Array,
       default: [],
+    },
+    isTrainer: {
+      type: Boolean,
+      default: false,
     },
   },
   {
