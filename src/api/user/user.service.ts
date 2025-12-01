@@ -8,9 +8,23 @@ import { LogService } from '../log/log.service'
 import { WeightService } from '../weight/weight.service'
 
 export class UserService {
-  static async query(filterBy = {}) {
+  static async query(filterBy: { txt?: string; searchingUserId?: string }) {
     try {
-      const users = await User.find(filterBy).select('-password')
+      const users = await User.aggregate([
+        {
+          $match: {
+            // search by fullname or email
+            $or: [
+              { fullname: { $regex: filterBy.txt, $options: 'i' } },
+              { email: { $regex: filterBy.txt, $options: 'i' } },
+            ],
+            // exclude the user who is searching
+            _id: { $ne: new mongoose.Types.ObjectId(filterBy.searchingUserId) },
+          },
+        },
+
+        { $project: { password: 0 } },
+      ])
       return users
     } catch (err) {
       logger.error('Failed to query users', err)
@@ -279,6 +293,8 @@ export class UserService {
           },
         },
       ])
+
+      console.log('user', user)
 
       return user || null
     } catch (err) {

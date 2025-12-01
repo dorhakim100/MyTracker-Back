@@ -6,7 +6,11 @@ import { AuthService } from '../auth/auth.service'
 export class UserController {
   static async getUsers(req: Request, res: Response) {
     try {
-      const users = await UserService.query()
+      console.log(req.query)
+
+      const filter = req.query
+
+      const users = await UserService.query(filter)
       res.json(users)
     } catch (err: any) {
       logger.error('Failed to get users', err)
