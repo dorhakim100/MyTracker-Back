@@ -16,6 +16,7 @@ import { goalRoutes } from './api/goal/goal.routes'
 import { workoutRoutes } from './api/workout/workout.routes'
 import { sessionRoutes } from './api/session/session.routes'
 import { instructionsRoutes } from './api/instructions/instructions.routes'
+import { trainerRequestRoutes } from './api/trainer-request/trainer-request.routes'
 
 import { setupSocketAPI } from './services/socket/socket.service'
 import { setupAsyncLocalStorage } from './middleware/setupAls.middleware'
@@ -64,6 +65,7 @@ app.use('/api/goal', goalRoutes)
 app.use('/api/workout', workoutRoutes)
 app.use('/api/session', sessionRoutes)
 app.use('/api/instructions', instructionsRoutes)
+app.use('/api/trainer-request', trainerRequestRoutes)
 
 app.use('/api/translate', translateRoutes)
 

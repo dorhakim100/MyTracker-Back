@@ -92,6 +92,10 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    trainersIds: {
+      type: [String],
+      default: [],
+    },
   },
   {
     timestamps: true,
