@@ -49,6 +49,7 @@ export class TrainerRequestService {
           },
         },
       ])
+      console.log('requests', requests)
       return requests
     } catch (err) {
       logger.error(
@@ -61,7 +62,28 @@ export class TrainerRequestService {
 
   static async getByTraineeId(traineeId: string) {
     try {
-      const requests = await TrainerRequest.find({ traineeId })
+      const requests = await TrainerRequest.aggregate([
+        { $match: { traineeId } },
+        { $addFields: { trainerObjectId: { $toObjectId: '$trainerId' } } },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'trainerObjectId',
+            foreignField: '_id',
+            as: 'trainer',
+          },
+        },
+        { $addFields: { trainer: { $arrayElemAt: ['$trainer', 0] } } },
+        {
+          $project: {
+            _id: 1,
+            traineeId: 1,
+            trainer: 1,
+            status: 1,
+            trainerId: 1,
+          },
+        },
+      ])
       return requests
     } catch (err) {
       logger.error(
@@ -70,6 +92,32 @@ export class TrainerRequestService {
       )
       throw err
     }
+  }
+
+  static getUserPipeline(userId: string, field: string) {
+    const otherUser = field === 'trainer' ? 'trainee' : 'trainer'
+    return [
+      { $match: { [otherUser + 'Id']: userId } },
+      { $addFields: { [field + 'ObjectId']: { $toObjectId: '$' + field } } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: field + 'ObjectId',
+          foreignField: '_id',
+          as: field,
+        },
+      },
+      { $addFields: { [field]: { $arrayElemAt: ['$' + field, 0] } } },
+      {
+        $project: {
+          _id: 1,
+          [field + 'Id']: 1,
+          [field]: 1,
+          status: 1,
+          [otherUser + 'Id']: 1,
+        },
+      },
+    ]
   }
 
   static async getPendingByTrainerId(trainerId: string) {
