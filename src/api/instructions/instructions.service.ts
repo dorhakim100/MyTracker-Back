@@ -34,6 +34,9 @@ export class InstructionsService {
           return await Instructions.create({
             ...instructionsWithoutId,
             weekNumber: filter.weekNumber,
+            timesPerWeek: instructionsObj.timesPerWeek,
+            doneTimes: 0,
+            isDone: false,
           })
         }
       }
