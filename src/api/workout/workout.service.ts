@@ -124,7 +124,13 @@ export class WorkoutService {
                       $filter: {
                         input: '$instructions',
                         as: 'instruction',
-                        cond: { $eq: ['$$instruction.isDone', false] },
+                        // cond: { $eq: ['$$instruction.isDone', false] },
+                        cond: {
+                          $lt: [
+                            '$$instruction.doneTimes',
+                            '$$instruction.timesPerWeek',
+                          ],
+                        },
                       },
                     },
                   },
@@ -134,6 +140,24 @@ export class WorkoutService {
               true,
               false,
             ],
+          },
+          doneTimes: {
+            $sum: {
+              $map: {
+                input: '$instructions',
+                as: 'instruction',
+                in: '$$instruction.doneTimes',
+              },
+            },
+          },
+          timesPerWeek: {
+            $sum: {
+              $map: {
+                input: '$instructions',
+                as: 'instruction',
+                in: '$$instruction.timesPerWeek',
+              },
+            },
           },
         },
       },
