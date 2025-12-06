@@ -5,7 +5,15 @@ import { logger } from '../../services/logger.service'
 export class WorkoutController {
   static async getWorkouts(req: Request, res: Response) {
     try {
-      const workouts = await WorkoutService.query(req.query)
+      const filter = {
+        from:
+          (req.query.from as string) ||
+          new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString(),
+        to: (req.query.to as string) || new Date().toISOString(),
+        forUserId: (req.query.forUserId as string) || '',
+      }
+
+      const workouts = await WorkoutService.query(filter)
       res.json(workouts)
     } catch (err: any) {
       logger.error('Failed to get workouts', err)

@@ -3,14 +3,45 @@ import mongoose from 'mongoose'
 import { logger } from '../../services/logger.service'
 
 export class WorkoutService {
-  static async query(filterBy = {}) {
+  static async query(filterBy: {
+    from: string
+    to: string
+    forUserId: string
+  }) {
     try {
       const workouts = await Workout.aggregate([
-        { $match: filterBy },
+        { $match: { forUserId: filterBy.forUserId, isActive: true } },
         ...this.getIsNewInstructionsPipeline(),
       ])
 
-      return workouts
+      const from = new Date(filterBy.from)
+      const to = new Date(filterBy.to)
+
+      // Extend "to" to the *end* of that day
+      to.setHours(23, 59, 59, 999)
+      // Extend "from" to the *start* of that day
+      from.setHours(0, 0, 0, 0)
+
+      const inActiveWorkouts = await Workout.aggregate([
+        {
+          $match: {
+            forUserId: filterBy.forUserId,
+            isActive: false,
+            createdAt: {
+              $gte: from,
+              $lte: to,
+            },
+            updatedAt: {
+              $gte: from,
+              $lte: to,
+            },
+          },
+        },
+        { $sort: { createdAt: -1 } },
+        ...this.getIsNewInstructionsPipeline(),
+      ])
+
+      return [...workouts, ...inActiveWorkouts]
     } catch (err) {
       logger.error('Failed to query workouts', err)
       throw err

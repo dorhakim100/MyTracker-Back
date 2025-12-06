@@ -45,6 +45,8 @@ export class InstructionsController {
     try {
       const instructions = req.body
 
+      console.log('instructions', instructions)
+
       delete instructions._id
       const addedInstructions = await InstructionsService.add(instructions)
       res.json(addedInstructions)
