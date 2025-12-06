@@ -68,16 +68,11 @@ export class InstructionsService {
       const isDoneToSet =
         newDoneTimes >= instruction.timesPerWeek ? true : false
 
-      logger.info('isDoneToSet', isDoneToSet)
-      logger.info('newDoneTimes', newDoneTimes)
-
       const updatedInstruction = await Instructions.findByIdAndUpdate(
         instruction._id,
         { doneTimes: newDoneTimes, isDone: isDoneToSet },
         { new: true }
       )
-
-      logger.info('updatedInstruction', updatedInstruction)
 
       return updatedInstruction
     } catch (err) {

@@ -107,8 +107,6 @@ export class TrainerRequestService {
   static async create(request: Partial<ITrainerRequest>) {
     try {
       // Validate that trainer exists and is actually a trainer
-
-      console.log('request', request)
       const trainerId = request.trainerId
       const traineeId = request.traineeId
 

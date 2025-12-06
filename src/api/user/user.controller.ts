@@ -6,8 +6,6 @@ import { AuthService } from '../auth/auth.service'
 export class UserController {
   static async getUsers(req: Request, res: Response) {
     try {
-      console.log(req.query)
-
       const filter = req.query
 
       const users = await UserService.query(filter)

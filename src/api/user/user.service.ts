@@ -294,8 +294,6 @@ export class UserService {
         },
       ])
 
-      console.log('user', user)
-
       return user || null
     } catch (err) {
       logger.error(`Failed to get user ${userId}`, err)

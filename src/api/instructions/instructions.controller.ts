@@ -61,8 +61,6 @@ export class InstructionsController {
     try {
       const instruction = req.body
 
-      logger.info('Updating instruction', instruction)
-
       const updatedInstruction = await InstructionsService.update(
         req.params.id,
         instruction

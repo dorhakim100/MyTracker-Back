@@ -70,8 +70,6 @@ export class SessionController {
     try {
       const session = req.body
 
-      logger.info('Adding session', session)
-
       const addedSession = await SessionService.add(session)
       res.json(addedSession)
     } catch (err: any) {
