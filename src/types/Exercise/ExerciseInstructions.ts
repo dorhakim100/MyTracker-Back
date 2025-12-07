@@ -1,8 +1,8 @@
-import { WorkingSet } from './WorkingSet'
+import { Set } from './Set'
 import { ExpectedActual } from '../ExpectedActual/ExpectedActual'
 
 export interface ExerciseInstructions {
   exerciseId: string
-  workingSets: WorkingSet[]
+  sets: Set[]
   notes: ExpectedActual<string>
 }

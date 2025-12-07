@@ -3,6 +3,8 @@ import mongoose from 'mongoose'
 import { logger } from '../../services/logger.service'
 import { getDateFromISO } from '../../services/utils'
 import { InstructionsService } from '../instructions/instructions.service'
+import { SetService } from '../set/set.service'
+import { Set } from '@/types/Exercise/Set'
 
 export class SessionService {
   private static getWorkoutLookupPipeline() {
@@ -29,6 +31,7 @@ export class SessionService {
       {
         $addFields: {
           workout: { $arrayElemAt: ['$workout', 0] },
+          userId: '$workout.userId',
         },
       },
     ]
@@ -101,19 +104,34 @@ export class SessionService {
   }
   static async playWorkout(
     sessionId: string,
-    workoutId: string
+    workoutId: string,
+    userId: string
   ): Promise<ISession | null> {
     try {
-      const session = await Session.aggregate([
-        { $match: { _id: new mongoose.Types.ObjectId(sessionId) } },
-        ...this.getWorkoutLookupPipeline(),
-        ...this.getCommonProjection(),
-      ])
+      // const session = await Session.aggregate([
+      //   { $match: { _id: new mongoose.Types.ObjectId(sessionId) } },
+      //   ...this.getWorkoutLookupPipeline(),
+      //   ...this.getCommonProjection(),
+      // ])
 
       const instructions =
         await InstructionsService.getNextInstructionsByWorkoutIdAndUpdate({
           workoutId,
         })
+
+      logger.info('instructions', instructions)
+
+      if (!instructions) return null
+
+      // Fire and forget - sets creation can take time, don't block the response
+      this.handleSetsCreation(instructions.exercises, sessionId, userId).catch(
+        (err) => {
+          logger.error(
+            `Failed to create sets in background for session ${sessionId}`,
+            err
+          )
+        }
+      )
 
       const instructionsId = instructions?._id
 
@@ -266,6 +284,42 @@ export class SessionService {
       await Session.findByIdAndDelete(sessionId)
     } catch (err) {
       logger.error(`SessionService.remove failed for ${sessionId}`, err)
+      throw err
+    }
+  }
+
+  static async handleSetsCreation(
+    exercises: { exerciseId: string; sets: Set[] }[],
+    sessionId: string,
+    userId: string
+  ) {
+    const setsToSave: Omit<
+      import('../set/set.model').ISet,
+      keyof mongoose.Document
+    >[] = []
+
+    exercises.forEach((exercise) => {
+      exercise.sets.forEach((set, index) => {
+        setsToSave.push({
+          sessionId,
+          userId,
+          exerciseId: exercise.exerciseId,
+          setNumber: index + 1,
+          weight: set.weight,
+          reps: set.reps,
+          rpe: set.rpe,
+          rir: set.rir,
+        })
+      })
+    })
+
+    try {
+      await SetService.addSets(setsToSave)
+    } catch (err) {
+      logger.error(
+        `SessionService.handleSetsCreation failed for ${sessionId}`,
+        err
+      )
       throw err
     }
   }

@@ -101,9 +101,13 @@ export class SessionController {
 
   static async playWorkout(req: Request, res: Response) {
     try {
-      const { workoutId } = req.body
+      const { workoutId, userId } = req.body
 
-      const session = await SessionService.playWorkout(req.params.id, workoutId)
+      const session = await SessionService.playWorkout(
+        req.params.id,
+        workoutId,
+        userId
+      )
 
       res.json(session)
     } catch (err: any) {
