@@ -117,4 +117,49 @@ export class SetService {
       throw err
     }
   }
+
+  static async saveBySessionIdAndExerciseIdAndSetIndex(
+    sessionId: string,
+    exerciseId: string,
+    setIndex: number,
+    set: Partial<ISet>
+  ) {
+    try {
+      const savedSet = await Set.findOneAndUpdate(
+        { sessionId, exerciseId, setNumber: setIndex + 1 },
+        set,
+        { new: true }
+      )
+      return savedSet
+    } catch (err) {
+      logger.error(
+        `Failed to save set by session id and exercise id and set index`,
+        err
+      )
+      throw err
+    }
+  }
+
+  static async addBySessionIdAndExerciseIdAndSetIndex(
+    sessionId: string,
+    exerciseId: string,
+    setIndex: number,
+    set: Partial<ISet>
+  ) {
+    try {
+      const addedSet = await Set.create({
+        ...set,
+        sessionId,
+        exerciseId,
+        setNumber: setIndex + 1,
+      })
+      return addedSet
+    } catch (err) {
+      logger.error(
+        `Failed to add set by session id and exercise id and set index`,
+        err
+      )
+      throw err
+    }
+  }
 }

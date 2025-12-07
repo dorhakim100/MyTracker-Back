@@ -19,15 +19,14 @@ export class InstructionsService {
     // forUserId: string
   }) {
     try {
-      logger.info('filter', filter)
       let instructions
       instructions = await Instructions.findOne({ ...filter })
-      logger.info('instructions', instructions)
+
       if (!instructions) {
         instructions = await Instructions.findOne({
           workoutId: filter.workoutId,
         }).sort({ weekNumber: -1 })
-        logger.info('instructions', instructions)
+
         if (!instructions) {
           return await Instructions.create({ ...filter, exercises: [] })
         } else {

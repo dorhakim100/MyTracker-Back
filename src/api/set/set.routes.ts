@@ -12,6 +12,14 @@ router.get(
 )
 router.get('/:id', SetController.getSet)
 router.post('/', requireAuth, SetController.addSet)
+router.post(
+  '/session/:sessionId/exercise/:exerciseId/:setIndex',
+  SetController.addSetBySessionIdAndExerciseIdAndSetIndex
+)
+router.put(
+  '/session/:sessionId/exercise/:exerciseId/:setIndex',
+  SetController.saveSetBySessionIdAndExerciseIdAndSetIndex
+)
 router.put('/:id', requireAuth, SetController.updateSet)
 router.delete('/:id', requireAuth, SetController.deleteSet)
 router.delete(

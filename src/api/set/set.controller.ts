@@ -115,4 +115,54 @@ export class SetController {
         .send({ err: 'Failed to delete sets by session id and exercise id' })
     }
   }
+
+  static async saveSetBySessionIdAndExerciseIdAndSetIndex(
+    req: Request,
+    res: Response
+  ) {
+    try {
+      const { sessionId, exerciseId, setIndex } = req.params
+      const set = req.body
+      const savedSet = await SetService.saveBySessionIdAndExerciseIdAndSetIndex(
+        sessionId,
+        exerciseId,
+        Number(setIndex),
+        set
+      )
+      res.json(savedSet)
+    } catch (err: any) {
+      logger.error(
+        'Failed to save set by session id and exercise id and set index',
+        err
+      )
+      res.status(500).send({
+        err: 'Failed to save set by session id and exercise id and set index',
+      })
+    }
+  }
+
+  static async addSetBySessionIdAndExerciseIdAndSetIndex(
+    req: Request,
+    res: Response
+  ) {
+    try {
+      const { sessionId, exerciseId, setIndex } = req.params
+      const set = req.body
+      const addedSet = await SetService.addBySessionIdAndExerciseIdAndSetIndex(
+        sessionId,
+        exerciseId,
+        Number(setIndex),
+        set
+      )
+      res.json(addedSet)
+    } catch (err: any) {
+      logger.error(
+        'Failed to add set by session id and exercise id and set index',
+        err
+      )
+      res.status(500).send({
+        err: 'Failed to add set by session id and exercise id and set index',
+      })
+    }
+  }
 }
