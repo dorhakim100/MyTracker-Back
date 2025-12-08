@@ -162,4 +162,20 @@ export class SetService {
       throw err
     }
   }
+
+  static async removeBySessionIdAndExerciseIdAndSetIndex(
+    sessionId: string,
+    exerciseId: string,
+    setIndex: number
+  ) {
+    try {
+      await Set.deleteOne({ sessionId, exerciseId, setNumber: setIndex + 1 })
+    } catch (err) {
+      logger.error(
+        `Failed to remove set by session id and exercise id and set index`,
+        err
+      )
+      throw err
+    }
+  }
 }

@@ -165,4 +165,29 @@ export class SetController {
       })
     }
   }
+
+  static async deleteSetBySessionIdAndExerciseIdAndSetIndex(
+    req: Request,
+    res: Response
+  ) {
+    try {
+      const { sessionId, exerciseId, setIndex } = req.params
+      await SetService.removeBySessionIdAndExerciseIdAndSetIndex(
+        sessionId,
+        exerciseId,
+        Number(setIndex)
+      )
+      res.send({ msg: 'Deleted successfully' })
+    } catch (err: any) {
+      logger.error(
+        'Failed to delete set by session id and exercise id and set index',
+        err
+      )
+      res
+        .status(500)
+        .send({
+          err: 'Failed to delete set by session id and exercise id and set index',
+        })
+    }
+  }
 }

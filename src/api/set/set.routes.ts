@@ -20,6 +20,11 @@ router.put(
   '/session/:sessionId/exercise/:exerciseId/:setIndex',
   SetController.saveSetBySessionIdAndExerciseIdAndSetIndex
 )
+router.delete(
+  '/session/:sessionId/exercise/:exerciseId/:setIndex',
+  SetController.deleteSetBySessionIdAndExerciseIdAndSetIndex
+)
+
 router.put('/:id', requireAuth, SetController.updateSet)
 router.delete('/:id', requireAuth, SetController.deleteSet)
 router.delete(
