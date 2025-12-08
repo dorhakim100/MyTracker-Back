@@ -61,7 +61,28 @@ export class TrainerRequestService {
 
   static async getByTraineeId(traineeId: string) {
     try {
-      const requests = await TrainerRequest.find({ traineeId })
+      const requests = await TrainerRequest.aggregate([
+        { $match: { traineeId } },
+        { $addFields: { trainerObjectId: { $toObjectId: '$trainerId' } } },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'trainerObjectId',
+            foreignField: '_id',
+            as: 'trainer',
+          },
+        },
+        { $addFields: { trainer: { $arrayElemAt: ['$trainer', 0] } } },
+        {
+          $project: {
+            _id: 1,
+            trainerId: 1,
+            trainer: 1,
+            status: 1,
+            traineeId: 1,
+          },
+        },
+      ])
       return requests
     } catch (err) {
       logger.error(
