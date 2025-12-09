@@ -1,6 +1,5 @@
 import { Instructions, IInstructions } from './instructions.model'
 import { logger } from '../../services/logger.service'
-import { WorkoutService } from '../workout/workout.service'
 
 export class InstructionsService {
   static async query(filterBy = {}) {
@@ -172,6 +171,28 @@ export class InstructionsService {
       // return weekNumberDone
     } catch (err) {
       logger.error(`Failed to get week number done ${workoutId}`, err)
+      throw err
+    }
+  }
+
+  static async undoPlayWorkout(instructionsId: string) {
+    try {
+      const instructions = await Instructions.findById(instructionsId)
+      if (!instructions) {
+        return null
+      }
+      const updatedInstructions = await Instructions.findByIdAndUpdate(
+        instructionsId,
+        {
+          isDone: false,
+          doneTimes: instructions.doneTimes - 1,
+        },
+        { new: true }
+      )
+
+      return updatedInstructions
+    } catch (err) {
+      logger.error(`Failed to undo play workout ${instructionsId}`, err)
       throw err
     }
   }

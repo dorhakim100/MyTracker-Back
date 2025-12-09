@@ -281,6 +281,12 @@ export class SessionService {
 
   static async remove(sessionId: string): Promise<void> {
     try {
+      const session = await this.getById(sessionId)
+
+      if (session?.instructionsId) {
+        await InstructionsService.undoPlayWorkout(session.instructionsId)
+        await SetService.removeBySessionId(sessionId)
+      }
       await Session.findByIdAndDelete(sessionId)
     } catch (err) {
       logger.error(`SessionService.remove failed for ${sessionId}`, err)
