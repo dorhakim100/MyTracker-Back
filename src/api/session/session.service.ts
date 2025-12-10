@@ -108,18 +108,10 @@ export class SessionService {
     userId: string
   ): Promise<ISession | null> {
     try {
-      // const session = await Session.aggregate([
-      //   { $match: { _id: new mongoose.Types.ObjectId(sessionId) } },
-      //   ...this.getWorkoutLookupPipeline(),
-      //   ...this.getCommonProjection(),
-      // ])
-
       const instructions =
         await InstructionsService.getNextInstructionsByWorkoutIdAndUpdate({
           workoutId,
         })
-
-      logger.info('instructions', instructions)
 
       if (!instructions) return null
 

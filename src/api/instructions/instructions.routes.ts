@@ -10,7 +10,7 @@ router.get(
   '/workout/:workoutId',
   InstructionsController.getInstructionsByWorkoutId
 )
-router.get('/actual-notes', InstructionsController.getActualNotes)
+router.get('/notes', InstructionsController.getNotesBySessionIdAndExerciseId)
 router.get('/:id', InstructionsController.getInstruction)
 router.post('/', requireAuth, InstructionsController.addInstruction)
 router.put('/:id', requireAuth, InstructionsController.updateInstruction)

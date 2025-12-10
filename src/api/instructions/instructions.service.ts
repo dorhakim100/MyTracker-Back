@@ -67,13 +67,8 @@ export class InstructionsService {
 
       const newDoneTimes = instruction.doneTimes + 1
 
-      logger.info('newDoneTimes', newDoneTimes)
-      logger.info('instruction.timesPerWeek', instruction.timesPerWeek)
-
       const isDoneToSet =
         newDoneTimes >= instruction.timesPerWeek ? true : false
-
-      logger.info('isDoneToSet', isDoneToSet)
 
       const updatedInstruction = await Instructions.findByIdAndUpdate(
         instruction._id,
@@ -202,7 +197,10 @@ export class InstructionsService {
       throw err
     }
   }
-  static async getActualNotes(sessionId: string, exerciseId: string) {
+  static async getNotesBySessionIdAndExerciseId(
+    sessionId: string,
+    exerciseId: string
+  ) {
     try {
       const session = await SessionService.getById(sessionId)
 
@@ -218,13 +216,11 @@ export class InstructionsService {
         return null
       }
 
-      const actualNotes = instruction.exercises.find(
+      const notes = instruction.exercises.find(
         (exercise) => exercise.exerciseId === exerciseId
-      )?.notes.actual
+      )?.notes
 
-      logger.info('actualNotes', actualNotes)
-
-      return actualNotes
+      return notes
     } catch (err) {
       logger.error(`Failed to get actual notes ${sessionId} ${exerciseId}`, err)
       throw err

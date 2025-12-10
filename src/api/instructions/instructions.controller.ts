@@ -96,19 +96,17 @@ export class InstructionsController {
     }
   }
 
-  static async getActualNotes(req: Request, res: Response) {
+  static async getNotesBySessionIdAndExerciseId(req: Request, res: Response) {
     try {
       const { sessionId, exerciseId } = req.query as {
         sessionId: string
         exerciseId: string
       }
-      logger.info('sessionId', sessionId)
-      logger.info('exerciseId', exerciseId)
-      const actualNotes = await InstructionsService.getActualNotes(
+      const notes = await InstructionsService.getNotesBySessionIdAndExerciseId(
         sessionId,
         exerciseId
       )
-      res.send(actualNotes)
+      res.send(notes)
     } catch (err: any) {
       logger.error('Failed to get actual notes', err)
       res.status(500).send({ err: 'Failed to get actual notes' })
