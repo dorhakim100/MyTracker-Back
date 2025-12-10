@@ -1,5 +1,6 @@
 import { Instructions, IInstructions } from './instructions.model'
 import { logger } from '../../services/logger.service'
+import { SessionService } from '../session/session.service'
 
 export class InstructionsService {
   static async query(filterBy = {}) {
@@ -66,8 +67,13 @@ export class InstructionsService {
 
       const newDoneTimes = instruction.doneTimes + 1
 
+      logger.info('newDoneTimes', newDoneTimes)
+      logger.info('instruction.timesPerWeek', instruction.timesPerWeek)
+
       const isDoneToSet =
         newDoneTimes >= instruction.timesPerWeek ? true : false
+
+      logger.info('isDoneToSet', isDoneToSet)
 
       const updatedInstruction = await Instructions.findByIdAndUpdate(
         instruction._id,
@@ -193,6 +199,34 @@ export class InstructionsService {
       return updatedInstructions
     } catch (err) {
       logger.error(`Failed to undo play workout ${instructionsId}`, err)
+      throw err
+    }
+  }
+  static async getActualNotes(sessionId: string, exerciseId: string) {
+    try {
+      const session = await SessionService.getById(sessionId)
+
+      if (!session || !session.instructionsId) {
+        logger.error(`Session not found ${sessionId}`)
+        return null
+      }
+
+      const instruction = await this.getById(session.instructionsId)
+
+      if (!instruction) {
+        logger.error(`Instruction not found ${sessionId}`)
+        return null
+      }
+
+      const actualNotes = instruction.exercises.find(
+        (exercise) => exercise.exerciseId === exerciseId
+      )?.notes.actual
+
+      logger.info('actualNotes', actualNotes)
+
+      return actualNotes
+    } catch (err) {
+      logger.error(`Failed to get actual notes ${sessionId} ${exerciseId}`, err)
       throw err
     }
   }
