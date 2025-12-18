@@ -137,8 +137,11 @@ export class SessionService {
         return null
       }
 
+      const sessiionToModify = await this.getById(sessionId)
+      if (!sessiionToModify) return null
+
       const sessionToSend = {
-        ...updatedSession.toObject(),
+        ...sessiionToModify,
         instructions,
       }
 
