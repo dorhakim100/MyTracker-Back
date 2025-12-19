@@ -73,7 +73,27 @@ export class InstructionsService {
       const newExercises = instruction.exercises.map((exercise) => {
         return {
           ...exercise,
-          isDone: false,
+          sets: exercise.sets.map((set) => {
+            return {
+              ...set,
+              weight: {
+                expected: set.weight.expected,
+                actual: set.weight.expected,
+              },
+              reps: {
+                expected: set.reps.expected,
+                actual: set.reps.expected,
+              },
+              rpe: {
+                expected: set.rpe?.expected,
+                actual: set.rpe?.expected,
+              },
+              rir: {
+                expected: set.rir?.expected,
+                actual: set.rir?.expected,
+              },
+            }
+          }),
         }
       })
       const updatedInstruction = await Instructions.findByIdAndUpdate(
