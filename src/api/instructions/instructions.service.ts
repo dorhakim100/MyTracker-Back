@@ -70,9 +70,19 @@ export class InstructionsService {
       const isDoneToSet =
         newDoneTimes >= instruction.timesPerWeek ? true : false
 
+      const newExercises = instruction.exercises.map((exercise) => {
+        return {
+          ...exercise,
+          isDone: false,
+        }
+      })
       const updatedInstruction = await Instructions.findByIdAndUpdate(
         instruction._id,
-        { doneTimes: newDoneTimes, isDone: isDoneToSet },
+        {
+          doneTimes: newDoneTimes,
+          isDone: isDoneToSet,
+          exercises: newExercises,
+        },
         { new: true }
       )
 

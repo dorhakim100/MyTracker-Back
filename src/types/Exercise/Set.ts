@@ -5,4 +5,5 @@ export interface Set {
   reps: ExpectedActual<number>
   rpe?: ExpectedActual<number>
   rir?: ExpectedActual<number>
+  isDone: boolean
 }

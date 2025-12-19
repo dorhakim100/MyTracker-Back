@@ -10,6 +10,7 @@ export interface ISet extends mongoose.Document {
   reps: WorkingSet['reps']
   rpe?: WorkingSet['rpe']
   rir?: WorkingSet['rir']
+  isDone: WorkingSet['isDone']
 }
 
 const setSchema = new mongoose.Schema(
@@ -48,6 +49,11 @@ const setSchema = new mongoose.Schema(
     rir: {
       type: Object,
       required: false,
+    },
+    isDone: {
+      type: Boolean,
+      required: true,
+      default: false,
     },
   },
   {

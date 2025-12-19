@@ -310,9 +310,12 @@ export class SessionService {
           reps: set.reps,
           rpe: set.rpe,
           rir: set.rir,
+          isDone: set.isDone,
         })
       })
     })
+
+    console.log('setsToSave', setsToSave)
 
     try {
       await SetService.addSets(setsToSave)

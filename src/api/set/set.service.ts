@@ -5,7 +5,9 @@ import mongoose from 'mongoose'
 export class SetService {
   static async query(filterBy = {}) {
     try {
-      const sets = await Set.find(filterBy).sort({ setNumber: 1 })
+      const sets = await Set.find({ ...filterBy, isDone: true }).sort({
+        setNumber: 1,
+      })
       return sets
     } catch (err) {
       logger.error('Failed to query sets', err)
