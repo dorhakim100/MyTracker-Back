@@ -301,17 +301,30 @@ export class SessionService {
 
     exercises.forEach((exercise) => {
       exercise.sets.forEach((set, index) => {
-        setsToSave.push({
+        const setData: any = {
           sessionId,
           userId,
           exerciseId: exercise.exerciseId,
           setNumber: index + 1,
           weight: set.weight,
           reps: set.reps,
-          rpe: set.rpe,
-          rir: set.rir,
           isDone: set.isDone,
-        })
+        }
+
+        // Only include RPE or RIR if they have actual values, but not both
+        if (set.rir?.actual != null) {
+          setData.rir = {
+            expected: set.rir?.expected,
+            actual: set.rir?.actual,
+          }
+        } else if (set.rpe?.actual != null) {
+          setData.rpe = {
+            expected: set.rpe?.expected,
+            actual: set.rpe?.actual,
+          }
+        }
+
+        setsToSave.push(setData)
       })
     })
 

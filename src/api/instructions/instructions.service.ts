@@ -3,6 +3,54 @@ import { logger } from '../../services/logger.service'
 import { SessionService } from '../session/session.service'
 
 export class InstructionsService {
+  /**
+   * Ensures RPE and RIR are mutually exclusive in instruction sets.
+   * If RIR has a value, RPE should be undefined.
+   * If RPE has a value, RIR should be undefined.
+   */
+  private static sanitizeInstructionSets(
+    instruction: Partial<IInstructions>
+  ): Partial<IInstructions> {
+    if (!instruction.exercises) {
+      return instruction
+    }
+
+    const sanitized = { ...instruction }
+    sanitized.exercises = instruction.exercises.map((exercise) => {
+      if (!exercise.sets) {
+        return exercise
+      }
+
+      return {
+        ...exercise,
+        sets: exercise.sets.map((set: any) => {
+          const setData: any = { ...set }
+
+          // Check if RIR has a value (expected or actual)
+          const hasRir = set.rir?.expected != null || set.rir?.actual != null
+
+          // Check if RPE has a value (expected or actual)
+          const hasRpe = set.rpe?.expected != null || set.rpe?.actual != null
+
+          if (hasRir) {
+            // If RIR exists, remove RPE
+            delete setData.rpe
+          } else if (hasRpe) {
+            // If RPE exists, remove RIR
+            delete setData.rir
+          } else {
+            // If neither has a value, remove both
+            delete setData.rpe
+            delete setData.rir
+          }
+
+          return setData
+        }),
+      }
+    })
+
+    return sanitized
+  }
   static async query(filterBy = {}) {
     try {
       const instructions = await Instructions.find(filterBy)
@@ -33,13 +81,16 @@ export class InstructionsService {
           // Convert Mongoose document to plain object and exclude _id
           const instructionsObj = instructions.toObject()
           const { _id, ...instructionsWithoutId } = instructionsObj
-          return await Instructions.create({
+          const newInstruction = {
             ...instructionsWithoutId,
             weekNumber: filter.weekNumber,
             timesPerWeek: instructionsObj.timesPerWeek,
             doneTimes: 0,
             isDone: false,
-          })
+          }
+          const sanitizedInstruction =
+            this.sanitizeInstructionSets(newInstruction)
+          return await Instructions.create(sanitizedInstruction)
         }
       }
       return instructions
@@ -74,7 +125,7 @@ export class InstructionsService {
         return {
           ...exercise,
           sets: exercise.sets.map((set) => {
-            return {
+            const setData: any = {
               ...set,
               weight: {
                 expected: set.weight.expected,
@@ -84,15 +135,22 @@ export class InstructionsService {
                 expected: set.reps.expected,
                 actual: set.reps.expected,
               },
-              rpe: {
-                expected: set.rpe?.expected,
-                actual: set.rpe?.expected,
-              },
-              rir: {
-                expected: set.rir?.expected,
-                actual: set.rir?.expected,
-              },
             }
+
+            // Only include RPE or RIR if they have expected values, but not both
+            if (set.rir?.expected != null) {
+              setData.rir = {
+                expected: set.rir.expected,
+                actual: set.rir.expected,
+              }
+            } else if (set.rpe?.expected != null) {
+              setData.rpe = {
+                expected: set.rpe.expected,
+                actual: set.rpe.expected,
+              }
+            }
+
+            return setData
           }),
         }
       })
@@ -151,7 +209,8 @@ export class InstructionsService {
 
   static async add(instruction: Partial<IInstructions>) {
     try {
-      const addedInstruction = await Instructions.create(instruction)
+      const sanitizedInstruction = this.sanitizeInstructionSets(instruction)
+      const addedInstruction = await Instructions.create(sanitizedInstruction)
       return addedInstruction
     } catch (err) {
       logger.error('Failed to add instruction', err)
@@ -164,9 +223,17 @@ export class InstructionsService {
     instructionToUpdate: Partial<IInstructions>
   ) {
     try {
+      const sanitizedInstruction =
+        this.sanitizeInstructionSets(instructionToUpdate)
+
+      // Build update object with $unset for fields that need to be removed from nested sets
+      const update: any = { ...sanitizedInstruction }
+
+      // For nested arrays, we need to ensure the update properly removes RPE/RIR
+      // MongoDB will handle this when we update the entire exercises array
       const instruction = await Instructions.findByIdAndUpdate(
         instructionId,
-        instructionToUpdate,
+        update,
         {
           new: true,
         }
