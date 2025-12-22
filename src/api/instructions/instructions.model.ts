@@ -8,6 +8,7 @@ export interface IInstructions extends mongoose.Document {
   timesPerWeek: number
   doneTimes: number
   isDone: boolean
+  isFinished: boolean
 }
 
 const instructionsSchema = new mongoose.Schema(
@@ -37,6 +38,11 @@ const instructionsSchema = new mongoose.Schema(
     },
     isDone: {
       type: Boolean,
+      default: false,
+    },
+    isFinished: {
+      type: Boolean,
+      required: true,
       default: false,
     },
   },

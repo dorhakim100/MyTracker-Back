@@ -5,4 +5,5 @@ export interface ExerciseInstructions {
   exerciseId: string
   sets: Set[]
   notes: ExpectedActual<string>
+  restingTime: number
 }
