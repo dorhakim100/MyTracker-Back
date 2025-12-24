@@ -2,6 +2,8 @@ import { ItemModel, IItem } from './item.model'
 import { logger } from '../../services/logger.service'
 import { Item } from '@/types/Item/Item'
 import { MealService } from '../meal/meal.service'
+import { TranslateService } from '../translate/translate.service'
+import { isEnglishWord } from '../../services/utils'
 
 export class ItemService {
   /**
@@ -16,10 +18,20 @@ export class ItemService {
    */
   static async getBySearchTerm(searchTerm: string): Promise<IItem[]> {
     try {
+      const translateSign = isEnglishWord(searchTerm) ? 'he' : 'en'
+
       const normalizedTerm = this.normalizeSearchTerm(searchTerm)
+      const translatedTerm = await TranslateService.translate(
+        normalizedTerm,
+        translateSign
+      )
       const items = await ItemModel.find({
-        searchTerm: normalizedTerm,
-        name: { $regex: normalizedTerm, $options: 'i' },
+        $or: [
+          { searchTerm: normalizedTerm },
+          { name: { $regex: normalizedTerm, $options: 'i' } },
+          { searchTerm: translatedTerm },
+          { name: { $regex: translatedTerm, $options: 'i' } },
+        ],
       })
 
       return items
