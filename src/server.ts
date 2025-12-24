@@ -6,10 +6,6 @@ import cookieParser from 'cookie-parser'
 import dotenv from 'dotenv'
 import mongoose from 'mongoose'
 
-import { ObjectIdToString } from 'mongoose'
-
-import { Set } from './api/set/set.model'
-
 import { authRoutes } from './api/auth/auth.routes'
 import { userRoutes } from './api/user/user.routes'
 import { logRoutes } from './api/log/log.routes'
@@ -32,11 +28,6 @@ dotenv.config()
 
 // Translate
 import { translateRoutes } from './api/translate/translate.routes'
-import { Workout } from './api/workout/workout.model'
-import { Session } from './api/session/session.model'
-import { Instructions } from './api/instructions/instructions.model'
-import { SessionService } from './api/session/session.service'
-import { InstructionsService } from './api/instructions/instructions.service'
 
 const app = express()
 const server = http.createServer(app)
