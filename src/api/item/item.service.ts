@@ -25,12 +25,13 @@ export class ItemService {
         normalizedTerm,
         translateSign
       )
+      const normalizedTranslatedTerm = this.normalizeSearchTerm(translatedTerm)
       const items = await ItemModel.find({
         $or: [
           { searchTerm: normalizedTerm },
           { name: { $regex: normalizedTerm, $options: 'i' } },
-          { searchTerm: translatedTerm },
-          { name: { $regex: translatedTerm, $options: 'i' } },
+          { searchTerm: normalizedTranslatedTerm },
+          { name: { $regex: normalizedTranslatedTerm, $options: 'i' } },
         ],
       })
 
@@ -46,9 +47,21 @@ export class ItemService {
    */
   static async hasCachedResults(searchTerm: string): Promise<boolean> {
     try {
+      const translateSign = isEnglishWord(searchTerm) ? 'he' : 'en'
+
       const normalizedTerm = this.normalizeSearchTerm(searchTerm)
+      const translatedTerm = await TranslateService.translate(
+        normalizedTerm,
+        translateSign
+      )
+      const normalizedTranslatedTerm = this.normalizeSearchTerm(translatedTerm)
       const count = await ItemModel.countDocuments({
-        searchTerm: normalizedTerm,
+        $or: [
+          { searchTerm: normalizedTerm },
+          { name: { $regex: normalizedTerm, $options: 'i' } },
+          { searchTerm: normalizedTranslatedTerm },
+          { name: { $regex: normalizedTranslatedTerm, $options: 'i' } },
+        ],
       })
       return count > 0
     } catch (err) {
