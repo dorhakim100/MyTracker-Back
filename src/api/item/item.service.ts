@@ -19,7 +19,7 @@ export class ItemService {
       const normalizedTerm = this.normalizeSearchTerm(searchTerm)
       const items = await ItemModel.find({
         searchTerm: normalizedTerm,
-        name: { $regex: searchTerm, $options: 'i' },
+        name: { $regex: normalizedTerm, $options: 'i' },
       })
 
       return items
@@ -47,6 +47,7 @@ export class ItemService {
 
   /**
    * Save items from a search result
+   * Only saves items that don't already exist (based on searchId)
    */
   static async saveSearchResults(
     searchTerm: string,
@@ -55,44 +56,69 @@ export class ItemService {
     try {
       const normalizedTerm = this.normalizeSearchTerm(searchTerm)
 
-      // Process all items in parallel with Promise.allSettled
-      const results = await Promise.allSettled(
-        items.map(async (item) => {
-          try {
-            const itemToSave = {
-              ...item,
-              searchTerm: normalizedTerm,
-            }
-            const savedItem = await ItemModel.create(itemToSave)
-            return savedItem
-          } catch (err: any) {
-            // If duplicate key error, try to find existing item
-            if (err.code === 11000 || err.name === 'MongoServerError') {
-              const existingItem = await ItemModel.findOne({
-                searchTerm: normalizedTerm,
-                searchId: item.searchId,
-              })
-              if (existingItem) {
-                return existingItem
-              }
-            } else {
-              // Log other errors
-              logger.warn(
-                `Failed to save item ${item.name} for search term ${searchTerm}`,
-                err
-              )
-            }
-            throw err
-          }
-        })
+      // Filter out items without searchId
+      const itemsWithSearchId = items.filter((item) => item.searchId)
+
+      if (itemsWithSearchId.length === 0) {
+        return []
+      }
+
+      // Get all searchIds to check
+      const searchIds = itemsWithSearchId.map((item) => item.searchId!)
+
+      // Check which items already exist
+      const existingItems = await ItemModel.find({
+        searchId: { $in: searchIds },
+      })
+
+      const existingSearchIds = new Set(
+        existingItems.map((item) => item.searchId).filter(Boolean)
       )
 
-      // Extract successfully saved items
-      const savedItems = results
-        .filter((result) => result.status === 'fulfilled')
-        .map((result) => (result as PromiseFulfilledResult<IItem>).value)
+      // Filter out items that already exist
+      const newItems = itemsWithSearchId.filter(
+        (item) => !existingSearchIds.has(item.searchId!)
+      )
 
-      return savedItems
+      if (newItems.length === 0) {
+        // All items already exist, return existing items
+        return existingItems
+      }
+
+      // Save only new items
+      const itemsToSave = newItems.map((item) => ({
+        ...item,
+        searchTerm: normalizedTerm,
+      }))
+
+      const savedItems = await ItemModel.insertMany(itemsToSave, {
+        ordered: false,
+      }).catch((err: any) => {
+        // If there are duplicate key errors, that's okay - some items might have been added concurrently
+        if (err.code === 11000 || err.name === 'MongoServerError') {
+          logger.info(
+            `Some items already exist for search term ${searchTerm}, fetching existing ones`
+          )
+          // Fetch all items (newly saved + existing)
+          return ItemModel.find({
+            searchId: { $in: searchIds },
+          })
+        }
+        throw err
+      })
+
+      // Combine newly saved items with existing items
+      const allItems = [
+        ...existingItems,
+        ...(Array.isArray(savedItems) ? savedItems : []),
+      ]
+
+      // Remove duplicates based on searchId
+      const uniqueItems = Array.from(
+        new Map(allItems.map((item) => [item.searchId, item])).values()
+      )
+
+      return uniqueItems
     } catch (err) {
       logger.error(`Failed to save search results for ${searchTerm}`, err)
       throw err
