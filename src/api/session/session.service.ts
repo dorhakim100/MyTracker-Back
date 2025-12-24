@@ -328,8 +328,6 @@ export class SessionService {
       })
     })
 
-    console.log('setsToSave', setsToSave)
-
     try {
       await SetService.addSets(setsToSave)
     } catch (err) {
