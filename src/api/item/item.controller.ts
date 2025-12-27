@@ -9,7 +9,7 @@ export class ItemController {
   static async getItemsBySearchTerm(req: Request, res: Response) {
     try {
       const { searchTerm } = req.query as { searchTerm: string }
-      console.log('searchTerm', searchTerm)
+
       if (!searchTerm) {
         logger.error('Search term is required')
         return res.status(400).send({ err: 'Search term is required' })
