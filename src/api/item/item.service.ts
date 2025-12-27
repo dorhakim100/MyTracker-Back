@@ -37,7 +37,14 @@ export class ItemService {
         ],
       })
 
-      return items
+      const meals = (await MealService.query({
+        $or: [
+          { name: { $regex: normalizedTerm, $options: 'i' } },
+          { name: { $regex: normalizedTranslatedTerm, $options: 'i' } },
+        ],
+      })) as unknown as IItem[]
+
+      return [...meals, ...items]
     } catch (err) {
       logger.error(`Failed to get items by search term ${searchTerm}`, err)
       throw err
