@@ -222,6 +222,8 @@ export class ItemService {
     try {
       if (item.searchTerm) {
         item.searchTerm = this.normalizeSearchTerm(item.searchTerm)
+      } else {
+        item.searchTerm = this.normalizeSearchTerm(item.name || '')
       }
       const addedItem = await ItemModel.create(item)
       return addedItem

@@ -26,7 +26,7 @@ const itemSchema = new mongoose.Schema(
     },
     searchTerm: {
       type: String,
-      required: true,
+      required: false,
       index: true,
     },
     image: {

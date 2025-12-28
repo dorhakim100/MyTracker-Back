@@ -86,13 +86,14 @@ export class ItemController {
   static async getItemBySearchId(req: Request, res: Response) {
     try {
       const { searchId } = req.query
+
       if (!searchId || typeof searchId !== 'string') {
         return res.status(400).send({ err: 'SearchId is required' })
       }
 
       const item = await ItemService.getBySearchId(searchId)
       if (!item) {
-        return res.status(404).send({ err: 'Item not found' })
+        return res.json(null)
       }
       res.json(item)
     } catch (err: any) {
