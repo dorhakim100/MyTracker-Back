@@ -135,6 +135,7 @@ export class InstructionsService {
                 expected: set.reps.expected,
                 actual: set.reps.expected,
               },
+              isDone: false,
             }
 
             // Only include RPE or RIR if they have expected values, but not both
@@ -160,6 +161,7 @@ export class InstructionsService {
           doneTimes: newDoneTimes,
           isDone: isDoneToSet,
           exercises: newExercises,
+          isFinished: false,
         },
         { new: true }
       )
