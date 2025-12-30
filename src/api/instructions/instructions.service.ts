@@ -3,6 +3,17 @@ import { logger } from '../../services/logger.service'
 import { SessionService } from '../session/session.service'
 
 export class InstructionsService {
+  static getEmptyInstructions(workoutId: string) {
+    return {
+      workoutId,
+      exercises: [],
+      isDone: false,
+      doneTimes: 0,
+      isFinished: false,
+      isEmpty: true,
+      weekNumber: 1,
+    }
+  }
   /**
    * Ensures RPE and RIR are mutually exclusive in instruction sets.
    * If RIR has a value, RPE should be undefined.

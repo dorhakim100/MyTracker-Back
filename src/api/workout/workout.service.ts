@@ -3,6 +3,16 @@ import mongoose from 'mongoose'
 import { logger } from '../../services/logger.service'
 
 export class WorkoutService {
+  static getEmptyWorkout(forUserId: string) {
+    return {
+      name: 'Empty Workout',
+      exercises: [],
+      muscleGroups: [],
+      isActive: true,
+      forUserId,
+      isEmpty: true,
+    }
+  }
   static async query(filterBy: {
     from: string
     to: string
@@ -10,7 +20,13 @@ export class WorkoutService {
   }) {
     try {
       const workouts = await Workout.aggregate([
-        { $match: { forUserId: filterBy.forUserId, isActive: true } },
+        {
+          $match: {
+            forUserId: filterBy.forUserId,
+            isActive: true,
+            $or: [{ isEmpty: false }, { isEmpty: { $exists: false } }],
+          },
+        },
         ...this.getIsNewInstructionsPipeline(),
       ])
 
@@ -27,6 +43,7 @@ export class WorkoutService {
           $match: {
             forUserId: filterBy.forUserId,
             isActive: false,
+            $or: [{ isEmpty: false }, { isEmpty: { $exists: false } }],
             createdAt: {
               $gte: from,
               $lte: to,

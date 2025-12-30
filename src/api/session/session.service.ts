@@ -5,6 +5,7 @@ import { getDateFromISO } from '../../services/utils'
 import { InstructionsService } from '../instructions/instructions.service'
 import { SetService } from '../set/set.service'
 import { Set } from '@/types/Exercise/Set'
+import { WorkoutService } from '../workout/workout.service'
 
 export class SessionService {
   private static getWorkoutLookupPipeline() {
@@ -148,6 +149,45 @@ export class SessionService {
       return (sessionToSend as unknown as ISession) || null
     } catch (err) {
       logger.error(`SessionService.getById failed for ${sessionId}`, err)
+      throw err
+    }
+  }
+  static async playEmptyWorkout(userId: string): Promise<ISession | null> {
+    try {
+      let session
+      const sessionQuery = await this.query({
+        userId,
+        date: getDateFromISO(new Date().toISOString()),
+      })
+
+      if (!sessionQuery[0]) {
+        session = await this.add({
+          userId,
+          date: getDateFromISO(new Date().toISOString()),
+        })
+      } else session = sessionQuery[0]
+
+      const emptyWorkout = await WorkoutService.add(
+        WorkoutService.getEmptyWorkout(userId)
+      )
+      const emptyWorkoutId = emptyWorkout._id
+
+      const emptyInstructions = await InstructionsService.add(
+        InstructionsService.getEmptyInstructions(emptyWorkoutId as string)
+      )
+      if (!emptyInstructions || !emptyWorkout) return null
+      const sessionToUpdate = {
+        ...session,
+        instructionsId: emptyInstructions._id,
+        workoutId: emptyWorkout._id,
+        userId,
+      }
+
+      const updatedSession = await this.update(session._id, sessionToUpdate)
+
+      return (updatedSession as unknown as ISession) || null
+    } catch (err) {
+      logger.error(`Failed to play empty workout for user ${userId}`, err)
       throw err
     }
   }

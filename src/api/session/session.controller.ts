@@ -115,4 +115,16 @@ export class SessionController {
       res.status(500).send({ err: 'Failed to play workout' })
     }
   }
+  static async playEmptyWorkout(req: Request, res: Response) {
+    try {
+      const { userId } = req.body
+
+      const session = await SessionService.playEmptyWorkout(userId)
+
+      res.json(session)
+    } catch (err: any) {
+      logger.error('Failed to play empty workout', err)
+      res.status(500).send({ err: 'Failed to play empty workout' })
+    }
+  }
 }
