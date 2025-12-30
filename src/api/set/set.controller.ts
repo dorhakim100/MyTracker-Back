@@ -183,11 +183,9 @@ export class SetController {
         'Failed to delete set by session id and exercise id and set index',
         err
       )
-      res
-        .status(500)
-        .send({
-          err: 'Failed to delete set by session id and exercise id and set index',
-        })
+      res.status(500).send({
+        err: 'Failed to delete set by session id and exercise id and set index',
+      })
     }
   }
 }
