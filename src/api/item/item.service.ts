@@ -13,6 +13,10 @@ export class ItemService {
     return term.toLowerCase().trim()
   }
 
+  private static escapeRegex(term: string): string {
+    return term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  }
+
   /**
    * Get cached items by search term
    */
@@ -28,12 +32,29 @@ export class ItemService {
       const normalizedTranslatedTerm = this.normalizeSearchTerm(translatedTerm)
       const items = await ItemModel.find({
         $or: [
-          // { searchTerm: normalizedTerm },
-          // { name: { $regex: normalizedTerm, $options: 'i' } },
-          // { searchTerm: normalizedTranslatedTerm },
-          // { name: { $regex: normalizedTranslatedTerm, $options: 'i' } },
-          { searchTerm: { $regex: normalizedTerm, $options: 'i' } },
-          { searchTerm: { $regex: normalizedTranslatedTerm, $options: 'i' } },
+          {
+            searchTerm: {
+              $elemMatch: {
+                $regex: this.escapeRegex(normalizedTerm),
+                $options: 'i',
+              },
+            },
+          },
+          {
+            searchTerm: {
+              $elemMatch: {
+                $regex: this.escapeRegex(normalizedTranslatedTerm),
+                $options: 'i',
+              },
+            },
+          },
+          { name: { $regex: this.escapeRegex(normalizedTerm), $options: 'i' } },
+          {
+            name: {
+              $regex: this.escapeRegex(normalizedTranslatedTerm),
+              $options: 'i',
+            },
+          },
         ],
       })
 
@@ -66,12 +87,29 @@ export class ItemService {
       const normalizedTranslatedTerm = this.normalizeSearchTerm(translatedTerm)
       const count = await ItemModel.countDocuments({
         $or: [
-          // { searchTerm: normalizedTerm },
-
-          { searchTerm: { $regex: normalizedTerm, $options: 'i' } },
-          { searchTerm: { $regex: normalizedTranslatedTerm, $options: 'i' } },
-          // { name: { $regex: normalizedTerm, $options: 'i' } },
-          // { name: { $regex: normalizedTranslatedTerm, $options: 'i' } },
+          {
+            searchTerm: {
+              $elemMatch: {
+                $regex: this.escapeRegex(normalizedTerm),
+                $options: 'i',
+              },
+            },
+          },
+          {
+            searchTerm: {
+              $elemMatch: {
+                $regex: this.escapeRegex(normalizedTranslatedTerm),
+                $options: 'i',
+              },
+            },
+          },
+          { name: { $regex: this.escapeRegex(normalizedTerm), $options: 'i' } },
+          {
+            name: {
+              $regex: this.escapeRegex(normalizedTranslatedTerm),
+              $options: 'i',
+            },
+          },
         ],
       })
       return count > 0
