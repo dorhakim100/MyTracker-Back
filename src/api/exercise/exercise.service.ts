@@ -4,6 +4,84 @@ import { Exercise } from '@/types/Exercise/Exercise'
 
 export class ExerciseService {
   /**
+   * Calculate relevance score for an exercise based on query match
+   * Higher score = better match
+   */
+  private static calculateRelevanceScore(
+    exercise: IExercise,
+    query: string
+  ): number {
+    const normalizedQuery = query.toLowerCase().trim()
+    const normalizedName = exercise.name.toLowerCase().trim()
+    const queryWords = normalizedQuery.split(/\s+/).filter((w) => w.length > 0)
+    const nameWords = normalizedName.split(/\s+/).filter((w) => w.length > 0)
+
+    let score = 0
+
+    // Exact match (highest priority) - 1000 points
+    if (normalizedName === normalizedQuery) {
+      score += 1000
+    }
+    // Query starts with name or name starts with query - 800 points
+    else if (
+      normalizedName.startsWith(normalizedQuery) ||
+      normalizedQuery.startsWith(normalizedName)
+    ) {
+      score += 800
+    }
+    // Name contains query as whole phrase - 600 points
+    else if (normalizedName.includes(normalizedQuery)) {
+      score += 600
+    }
+    // All query words appear in name (in order) - 500 points
+    else if (
+      queryWords.every((word) => normalizedName.includes(word)) &&
+      queryWords.length > 0
+    ) {
+      // Check if words appear in order
+      let lastIndex = -1
+      const wordsInOrder = queryWords.every((word) => {
+        const index = normalizedName.indexOf(word, lastIndex + 1)
+        if (index > lastIndex) {
+          lastIndex = index
+          return true
+        }
+        return false
+      })
+
+      if (wordsInOrder) {
+        score += 500
+      } else {
+        // Words appear but not in order - 300 points
+        score += 300
+      }
+    }
+    // Some query words appear in name - 100 points per word
+    else {
+      const matchingWords = queryWords.filter((word) =>
+        normalizedName.includes(word)
+      )
+      score += matchingWords.length * 100
+    }
+
+    // Bonus: Query matches at word boundary (e.g., "bench press" matches "bench press" in "barbell bench press")
+    const nameWordBoundaries = nameWords.join(' ')
+    if (nameWordBoundaries.includes(normalizedQuery)) {
+      score += 200
+    }
+
+    // Bonus: Query words match at the beginning of name words
+    queryWords.forEach((queryWord) => {
+      nameWords.forEach((nameWord) => {
+        if (nameWord.startsWith(queryWord) || queryWord.startsWith(nameWord)) {
+          score += 50
+        }
+      })
+    })
+
+    return score
+  }
+  /**
    * Get exercise by ID
    */
   static async getById(exerciseId: string): Promise<IExercise | null> {
@@ -68,14 +146,52 @@ export class ExerciseService {
     try {
       const { query, muscleGroup, equipment } = params
 
-      const exercises = await ExerciseModel.find({
+      const muscleGroupLower = muscleGroup?.toLocaleLowerCase()
+      const equipmentLower = equipment?.toLocaleLowerCase()
+
+      // Build filter query
+      const filter: any = {
         $or: [
           { $text: { $search: query } },
-          { muscleGroups: { $regex: query, $options: 'i' } },
-          { equipment: { $regex: query, $options: 'i' } },
+          // { muscleGroups: muscleGroup !== 'All' ? { $regex: query, $options: 'i' } : {  } },
+          // { equipment: { $regex: query, $options: 'i' } },
+          { name: { $regex: query, $options: 'i' } },
         ],
-      }).sort({ popularityScore: -1 })
-      return exercises
+      }
+
+      // Add optional filters
+      if (muscleGroup && muscleGroup !== 'All') {
+        filter.muscleGroups = { $in: [muscleGroupLower] }
+      }
+      if (equipment && equipment !== 'All') {
+        filter.equipments = { $in: [equipmentLower] }
+      }
+
+      const exercises = await ExerciseModel.find(filter)
+      // return exercises
+
+      // Calculate relevance scores and sort
+      const exercisesWithScores = exercises.map((exercise) => {
+        const relevanceScore = this.calculateRelevanceScore(exercise, query)
+        const popularityScore = exercise.popularityScore || 0
+
+        // Combined score: relevance (weighted more) + popularity (weighted less)
+        // Relevance is multiplied by 10 to give it more weight than popularity
+        const combinedScore = relevanceScore * 10 + popularityScore
+
+        return {
+          exercise,
+          relevanceScore,
+          popularityScore,
+          combinedScore,
+        }
+      })
+
+      // Sort by combined score (descending)
+      exercisesWithScores.sort((a, b) => b.combinedScore - a.combinedScore)
+
+      // Return just the exercises
+      return exercisesWithScores.map((item) => item.exercise).slice(0, 50)
     } catch (err) {
       logger.error(`Failed to search exercises by name ${params.query}`, err)
       throw err
