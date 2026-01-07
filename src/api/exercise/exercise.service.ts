@@ -153,8 +153,6 @@ export class ExerciseService {
       const filter: any = {
         $or: [
           { $text: { $search: query } },
-          // { muscleGroups: muscleGroup !== 'All' ? { $regex: query, $options: 'i' } : {  } },
-          // { equipment: { $regex: query, $options: 'i' } },
           { name: { $regex: query, $options: 'i' } },
         ],
       }
