@@ -218,4 +218,15 @@ export class ItemController {
       res.status(500).send({ err: 'Failed to get items by searchId bulk' })
     }
   }
+
+  static async getImageNative(req: Request, res: Response) {
+    try {
+      const { searchId } = req.query as { searchId: string }
+      const imageNative = await ItemService.getImageNative(searchId)
+      res.json(imageNative)
+    } catch (err: any) {
+      logger.error('Failed to get image native', err)
+      res.status(500).send({ err: 'Failed to get image native' })
+    }
+  }
 }

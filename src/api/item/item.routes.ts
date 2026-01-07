@@ -13,6 +13,7 @@ router.get('/search/terms', ItemController.getCachedSearchTerms)
 
 // Item CRUD routes
 router.get('/', ItemController.getItems)
+router.get('/image-native', ItemController.getImageNative)
 router.get('/search-id/bulk', ItemController.getItemsBySearchIdBulk)
 router.get('/search-id', ItemController.getItemBySearchId)
 router.get('/search-name', ItemController.searchItems)

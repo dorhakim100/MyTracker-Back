@@ -341,4 +341,14 @@ export class ItemService {
       throw err
     }
   }
+
+  static async getImageNative(searchId: string): Promise<string | null> {
+    try {
+      const item = await ItemModel.findOne({ searchId })
+      return item?.image || null
+    } catch (err) {
+      logger.error(`Failed to get image native for searchId ${searchId}`, err)
+      throw err
+    }
+  }
 }
