@@ -5,6 +5,7 @@ import { logger } from '../../services/logger.service'
 import { DayService } from '../day/day.service'
 import { IDay } from '../day/day.model'
 import { UserService } from '../user/user.service'
+import { ItemService } from '../item/item.service'
 
 export class AuthService {
   static async login(email: string, password: string): Promise<IUser> {
@@ -16,6 +17,10 @@ export class AuthService {
     if (!match) throw new Error('Invalid email or password')
 
     const aggregatedUser = await UserService.getById(user._id as string)
+    // const favorites = await ItemService.getBySearchIdBulk(
+    //   aggregatedUser.favoriteItems
+    // )
+    // aggregatedUser.favoriteItems = favorites
     delete (aggregatedUser as any).password
     return aggregatedUser as IUser
   }

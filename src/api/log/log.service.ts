@@ -26,7 +26,6 @@ export class LogService {
   static async add(log: Partial<ILog>) {
     try {
       if (log.itemId === '') log.itemId = `custom-log`
-      console.log('log', log)
 
       const addedLog = await Log.create(log)
       return addedLog
@@ -53,6 +52,15 @@ export class LogService {
       await Log.findByIdAndDelete(logId)
     } catch (err) {
       logger.error(`Failed to remove log ${logId}`, err)
+      throw err
+    }
+  }
+
+  static async removeAllByUserId(userId: string) {
+    try {
+      await Log.deleteMany({ createdBy: userId })
+    } catch (err) {
+      logger.error(`Failed to remove all logs by user ${userId}`, err)
       throw err
     }
   }

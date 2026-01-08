@@ -1,0 +1,13 @@
+{
+  "name": "MyTracker — Sign In",
+  "short_name": "MyTracker",
+  "start_url": "/signin?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#e0e0e0",
+  "theme_color": "#e0e0e0",
+  "icons": [
+    { "src": "/logo-square.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/logo-square.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

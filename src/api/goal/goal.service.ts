@@ -78,7 +78,6 @@ export class GoalService {
         isSelected: true,
         updatedAt: Date.now(),
       })
-      console.log(updated)
 
       return updated
     } catch (err) {
@@ -95,6 +94,15 @@ export class GoalService {
         `GoalService.setAllGoalsAsNotSelected failed for ${userId}`,
         err
       )
+      throw err
+    }
+  }
+
+  static async removeAllByUserId(userId: string) {
+    try {
+      await GoalModel.deleteMany({ userId })
+    } catch (err) {
+      logger.error(`GoalService.removeAllByUserId failed for ${userId}`, err)
       throw err
     }
   }

@@ -3,11 +3,28 @@ import mongoose from 'mongoose'
 import { User, IUser } from './user.model'
 import { logger } from '../../services/logger.service'
 import { Goal } from '@/types/Goal/Goal'
+import { GoalService } from '../goal/goal.service'
+import { LogService } from '../log/log.service'
+import { WeightService } from '../weight/weight.service'
 
 export class UserService {
-  static async query(filterBy = {}) {
+  static async query(filterBy: { txt?: string; searchingUserId?: string }) {
     try {
-      const users = await User.find(filterBy).select('-password')
+      const users = await User.aggregate([
+        {
+          $match: {
+            // search by fullname or email
+            $or: [
+              { fullname: { $regex: filterBy.txt, $options: 'i' } },
+              { email: { $regex: filterBy.txt, $options: 'i' } },
+            ],
+            // exclude the user who is searching
+            _id: { $ne: new mongoose.Types.ObjectId(filterBy.searchingUserId) },
+          },
+        },
+
+        { $project: { password: 0 } },
+      ])
       return users
     } catch (err) {
       logger.error('Failed to query users', err)
@@ -218,9 +235,11 @@ export class UserService {
         {
           $lookup: {
             from: 'weights',
-            let: { ids: '$weightsObjectIds' },
+            // Define uid as the user's ObjectId as a string
+            let: { uid: { $toString: '$_id' } },
             pipeline: [
-              { $match: { $expr: { $in: ['$_id', '$$ids'] } } },
+              // Match let variable uid with userId, must be $expr and $eq
+              { $match: { $expr: { $eq: ['$userId', '$$uid'] } } },
               { $sort: { createdAt: -1 } },
               { $limit: 1 },
             ],
@@ -235,6 +254,7 @@ export class UserService {
             mealsIds: 0,
             weightsIds: 0,
             _lastWeight: 0,
+            'lastWeight.userId': 0,
           },
         },
         {
@@ -274,8 +294,6 @@ export class UserService {
         },
       ])
 
-      console.log('user', user)
-
       return user || null
     } catch (err) {
       logger.error(`Failed to get user ${userId}`, err)
@@ -297,6 +315,11 @@ export class UserService {
   static async remove(userId: string) {
     try {
       await User.findByIdAndDelete(userId)
+
+      // no need to await these
+      LogService.removeAllByUserId(userId)
+      GoalService.removeAllByUserId(userId)
+      WeightService.removeAllByUserId(userId)
     } catch (err) {
       logger.error(`Failed to remove user ${userId}`, err)
       throw err
@@ -307,8 +330,6 @@ export class UserService {
     try {
       delete userToUpdate.goals
       delete userToUpdate.currGoal
-
-      console.log('userToUpdate', userToUpdate)
 
       const user = await User.findByIdAndUpdate(userId, userToUpdate, {
         new: true,

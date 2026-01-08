@@ -6,6 +6,10 @@ import cookieParser from 'cookie-parser'
 import dotenv from 'dotenv'
 import mongoose from 'mongoose'
 
+dotenv.config()
+// Translate
+import { translateRoutes } from './api/translate/translate.routes'
+
 import { authRoutes } from './api/auth/auth.routes'
 import { userRoutes } from './api/user/user.routes'
 import { logRoutes } from './api/log/log.routes'
@@ -13,12 +17,17 @@ import { dayRoutes } from './api/day/day.routes'
 import { mealRoutes } from './api/meal/meal.routes'
 import { weightRoutes } from './api/weight/weight.routes'
 import { goalRoutes } from './api/goal/goal.routes'
+import { workoutRoutes } from './api/workout/workout.routes'
+import { sessionRoutes } from './api/session/session.routes'
+import { instructionsRoutes } from './api/instructions/instructions.routes'
+import { trainerRequestRoutes } from './api/trainer-request/trainer-request.routes'
+import { setRoutes } from './api/set/set.routes'
+import { itemRoutes } from './api/item/item.routes'
+import { exerciseRoutes } from './api/exercise/exercise.routes'
 
 import { setupSocketAPI } from './services/socket/socket.service'
 import { setupAsyncLocalStorage } from './middleware/setupAls.middleware'
 import { logger } from './services/logger.service'
-
-dotenv.config()
 
 const app = express()
 const server = http.createServer(app)
@@ -82,6 +91,15 @@ app.use('/api/day', dayRoutes)
 app.use('/api/meal', mealRoutes)
 app.use('/api/weight', weightRoutes)
 app.use('/api/goal', goalRoutes)
+app.use('/api/workout', workoutRoutes)
+app.use('/api/session', sessionRoutes)
+app.use('/api/instructions', instructionsRoutes)
+app.use('/api/trainer-request', trainerRequestRoutes)
+app.use('/api/set', setRoutes)
+app.use('/api/item', itemRoutes)
+app.use('/api/exercise', exerciseRoutes)
+
+app.use('/api/translate', translateRoutes)
 
 // Setup Socket.IO
 setupSocketAPI(server)
