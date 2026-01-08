@@ -38,29 +38,65 @@ app.use(cookieParser())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
+// if (process.env.NODE_ENV === 'production') {
+//   app.use(express.static(path.join(__dirname, '../public')))
+//   // app.use(express.static(path.resolve('public')))
+// } else {
+//   const corsOptions = {
+//     origin: [
+//       'http://127.0.0.1:3000',
+//       'http://localhost:3000',
+//       'http://127.0.0.1:5173',
+//       'http://localhost:5173',
+//       // Capacitor
+//       'https://localhost',
+//       'http://localhost',
+//       'capacitor://localhost',
+//       'ionic://localhost',
+//       'https://localhost/',
+//       'http://localhost/',
+//       'capacitor://localhost/',
+//       'ionic://localhost/',
+//     ],
+//     credentials: true,
+//   }
+//   app.use(cors(corsOptions))
+// }
+
+const allowedOrigins = new Set([
+  // Web dev
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+
+  // Capacitor / Ionic
+  'https://localhost',
+  'http://localhost',
+  'capacitor://localhost',
+  'ionic://localhost',
+
+  // Your production frontend (if you have one)
+  // 'https://your-frontend-domain.com',
+])
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true) // Postman/curl
+    if (allowedOrigins.has(origin)) return cb(null, true)
+    return cb(null, false)
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+}
+
+app.use(cors(corsOptions))
+app.options('*', cors(corsOptions)) // preflight
+
+// Serve static ONLY in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../public')))
-  // app.use(express.static(path.resolve('public')))
-} else {
-  const corsOptions = {
-    origin: [
-      'http://127.0.0.1:3000',
-      'http://localhost:3000',
-      'http://127.0.0.1:5173',
-      'http://localhost:5173',
-      // Capacitor
-      'https://localhost',
-      'http://localhost',
-      'capacitor://localhost',
-      'ionic://localhost',
-      'https://localhost/',
-      'http://localhost/',
-      'capacitor://localhost/',
-      'ionic://localhost/',
-    ],
-    credentials: true,
-  }
-  app.use(cors(corsOptions))
 }
 
 app.all('*', setupAsyncLocalStorage)
