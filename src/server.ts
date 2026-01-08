@@ -53,6 +53,10 @@ if (process.env.NODE_ENV === 'production') {
       'http://localhost',
       'capacitor://localhost',
       'ionic://localhost',
+      'https://localhost/',
+      'http://localhost/',
+      'capacitor://localhost/',
+      'ionic://localhost/',
     ],
     credentials: true,
   }
