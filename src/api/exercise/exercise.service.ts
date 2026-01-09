@@ -197,6 +197,51 @@ export class ExerciseService {
   }
 
   /**
+   * Get alternate exercises
+   */
+  static async getAlternateExercises(exercise: Exercise): Promise<IExercise[]> {
+    try {
+      const exercises = await ExerciseModel.find(
+        this._getAlternateExercisesFilter(exercise)
+      ).sort({ popularityScore: -1 })
+      return exercises
+    } catch (err) {
+      logger.error(`Failed to get alternate exercises ${exercise}`, err)
+      throw err
+    }
+  }
+
+  private static _getAlternateExercisesFilter(exercise: Exercise) {
+    const normalizedName = this.getExerciseNormalizedName(exercise.name)
+
+    return {
+      $and: [
+        { $text: { $search: normalizedName } },
+        { exerciseId: { $ne: exercise.exerciseId } },
+        { muscleGroups: { $eq: exercise.muscleGroups } },
+      ],
+    }
+  }
+
+  static getExerciseNormalizedName(name: string) {
+    const wordsToRemove = [
+      'lever',
+      'machine',
+      'dumbbell',
+      'cable',
+      'barbell',
+      'smith',
+      'kettlebell',
+    ]
+
+    return name
+      .toLowerCase()
+      .replace(new RegExp(`\\b(${wordsToRemove.join('|')})\\b`, 'gi'), '')
+      .replace(/\s+/g, ' ') // collapse multiple spaces
+      .trim()
+  }
+
+  /**
    * Search exercises by muscle groups
    */
   static async searchByMuscleGroups(
