@@ -203,7 +203,10 @@ export class ExerciseService {
     try {
       const exercises = await ExerciseModel.find(
         this._getAlternateExercisesFilter(exercise)
-      ).sort({ popularityScore: -1 })
+      )
+        .sort({ popularityScore: -1 })
+        .select({ createdAt: 0, updatedAt: 0 })
+
       return exercises
     } catch (err) {
       logger.error(`Failed to get alternate exercises ${exercise}`, err)
