@@ -11,7 +11,9 @@ router.get(
   SetController.getSetsBySessionIdAndExerciseId
 )
 router.get('/:id', SetController.getSet)
+
 router.post('/', requireAuth, SetController.addSet)
+router.post('/bulk-save', requireAuth, SetController.bulkSaveSets)
 router.post(
   '/session/:sessionId/exercise/:exerciseId/:setIndex',
   SetController.addSetBySessionIdAndExerciseIdAndSetIndex

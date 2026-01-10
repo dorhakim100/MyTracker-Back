@@ -65,6 +65,17 @@ export class SetController {
     }
   }
 
+  static async bulkSaveSets(req: Request, res: Response) {
+    try {
+      const sets = req.body
+      const savedSets = await SetService.bulkSave(sets)
+      res.json(savedSets)
+    } catch (err: any) {
+      logger.error('Failed to bulk save sets', err)
+      res.status(500).send({ err: 'Failed to bulk save sets' })
+    }
+  }
+
   static async updateSet(
     req: Request & { user?: { _id: string } },
     res: Response
