@@ -201,17 +201,39 @@ export class ExerciseService {
    */
   static async getAlternateExercises(exercise: Exercise): Promise<IExercise[]> {
     try {
+      const backendExercise = await this.getByExerciseId(exercise.exerciseId)
+
+      const normalizedExercise = backendExercise || exercise
       const exercises = await ExerciseModel.find(
-        this._getAlternateExercisesFilter(exercise)
+        this._getAlternateExercisesFilter(normalizedExercise)
       )
-        .sort({ popularityScore: -1 })
+        .sort({
+          popularityScore: -1,
+        })
         .select({ createdAt: 0, updatedAt: 0 })
 
-      return exercises
+      const sortedExercises = this.getSortedExercises(
+        exercises,
+        normalizedExercise
+      )
+
+      return sortedExercises
     } catch (err) {
       logger.error(`Failed to get alternate exercises ${exercise}`, err)
       throw err
     }
+  }
+
+  private static getSortedExercises(
+    exercises: IExercise[],
+    exercise: Exercise
+  ) {
+    return exercises.sort((a, b) => {
+      return (
+        this.calculateRelevanceScore(b, exercise.name) -
+        this.calculateRelevanceScore(a, exercise.name)
+      )
+    })
   }
 
   private static _getAlternateExercisesFilter(exercise: Exercise) {
@@ -221,7 +243,7 @@ export class ExerciseService {
       $and: [
         { $text: { $search: normalizedName } },
         { exerciseId: { $ne: exercise.exerciseId } },
-        { muscleGroups: { $eq: exercise.muscleGroups } },
+        // { muscleGroups: { $eq: exercise.muscleGroups } },
       ],
     }
   }
@@ -235,13 +257,17 @@ export class ExerciseService {
       'barbell',
       'smith',
       'kettlebell',
+      'seated',
+      'lying',
     ]
 
-    return name
+    const normalizedName = name
       .toLowerCase()
       .replace(new RegExp(`\\b(${wordsToRemove.join('|')})\\b`, 'gi'), '')
       .replace(/\s+/g, ' ') // collapse multiple spaces
       .trim()
+
+    return normalizedName
   }
 
   /**
