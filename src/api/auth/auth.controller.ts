@@ -12,7 +12,7 @@ export class AuthController {
       const loginToken = AuthService.getLoginToken(user)
 
       res.cookie('loginToken', loginToken, { sameSite: 'none', secure: true })
-      res.json(user)
+      res.json({ user, loginToken })
     } catch (err: any) {
       logger.error('Failed to Login ' + err)
       res.status(401).send({ err: 'Failed to Login' })
@@ -34,7 +34,7 @@ export class AuthController {
         loggedToday: loggedToday as IDay,
       }
 
-      res.json(accountToReturn)
+      res.json({ user: accountToReturn, loginToken })
     } catch (err: any) {
       logger.error('Failed to signup ' + err)
       res.status(400).send({ err: 'Failed to signup' })

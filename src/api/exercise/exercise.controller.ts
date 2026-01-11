@@ -174,14 +174,13 @@ export class ExerciseController {
   static async addExercises(req: Request, res: Response) {
     try {
       const { exercises } = req.body
-      console.log(`Got ${exercises.length} exercises to add`)
 
       if (!exercises || !Array.isArray(exercises)) {
         return res.status(400).send({ err: 'Exercises array is required' })
       }
 
       const addedExercises = await ExerciseService.addMany(exercises)
-      console.log(`Added ${addedExercises.length} exercises`)
+
       res.json(addedExercises)
     } catch (err: any) {
       logger.error('Failed to add exercises', err)

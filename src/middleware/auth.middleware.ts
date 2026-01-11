@@ -65,10 +65,17 @@ export function requireAuth(
   res: Response,
   next: NextFunction
 ) {
-  const loginToken = req.cookies.loginToken
+  const cookieToken = req.cookies.loginToken
+  const authHeader = req.headers.authorization
 
-  if (!loginToken) return res.status(401).send('Not Authenticated')
-  const token = loginToken
+  const headerToken = authHeader?.startsWith('Bearer ')
+    ? authHeader.slice(7)
+    : null
+
+  const token = cookieToken || headerToken
+
+  if (!token) return res.status(401).send('Not Authenticated')
+
   // Verify token
 
   const loggedinUser = jwt.verify(
