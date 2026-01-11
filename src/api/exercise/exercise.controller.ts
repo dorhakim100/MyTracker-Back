@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { ExerciseService } from './exercise.service'
 import { logger } from '../../services/logger.service'
+import { Exercise } from '@/types/Exercise/Exercise'
 
 export class ExerciseController {
   /**
@@ -70,6 +71,26 @@ export class ExerciseController {
     } catch (err: any) {
       logger.error('Failed to get exercises', err)
       res.status(500).send({ err: 'Failed to get exercises' })
+    }
+  }
+
+  /**
+   * Get alternate exercises
+   */
+  static async getAlternateExercises(req: Request, res: Response) {
+    try {
+      const { exerciseToChange } = req.query
+
+      if (!exerciseToChange) {
+        return res.status(400).send({ err: 'Exercise is required' })
+      }
+      const exercises = await ExerciseService.getAlternateExercises(
+        exerciseToChange as unknown as Exercise
+      )
+      res.json(exercises)
+    } catch (err: any) {
+      logger.error('Failed to get alternate exercises', err)
+      res.status(500).send({ err: 'Failed to get alternate exercises' })
     }
   }
 

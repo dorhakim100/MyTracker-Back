@@ -101,6 +101,18 @@ export class SetService {
       throw err
     }
   }
+  static async bulkSave(sets: Partial<ISet>[]) {
+    try {
+      const sanitizedSets = sets.map((set) => this.sanitizeRpeRir(set))
+      console.log('sanitizedSets', sanitizedSets)
+
+      const savedSets = await Set.insertMany(sanitizedSets)
+      return savedSets
+    } catch (err) {
+      logger.error('Failed to bulk save sets', err)
+      throw err
+    }
+  }
 
   static async update(setId: string, setToUpdate: Partial<ISet>) {
     try {
