@@ -36,18 +36,17 @@ export class ChatGPTService {
     try {
       const instructions = await Instructions.findById(instructionsId)
 
-      console.log('instructions', instructions)
+      // console.log('instructions', instructions)
 
       const promptMessages = buildChangeExercisePrompt(oldExercise, newExercise)
 
-      const response = await client.responses.create({
-        model: models.gpt5mini,
-        input: promptMessages,
-        // max_output_tokens: 120,
-      })
+      // const response = await client.responses.create({
+      //   model: models.gpt5mini,
+      //   input: promptMessages,
+      //   // max_output_tokens: 120,
+      // })
 
-      console.log('response', response)
-      return JSON.parse(response.output_text)
+      // return JSON.parse(response.output_text)
     } catch (err: any) {
       logger.error('ChatGPTService.changeExercise failed', err)
       throw err
