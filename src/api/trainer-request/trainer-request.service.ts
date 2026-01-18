@@ -48,6 +48,34 @@ export class TrainerRequestService {
             trainerId: 1,
           },
         },
+
+        {
+          $lookup: {
+            from: 'goals',
+            let: { uid: '$trainee._id' },
+            pipeline: [
+              {
+                $match: { $expr: { $eq: ['$userId', { $toString: '$$uid' }] } },
+              },
+              { $sort: { startDate: -1 } },
+            ],
+            as: 'trainee.goals',
+          },
+        },
+        {
+          $set: {
+            'trainee.currGoal': {
+              $first: {
+                $filter: {
+                  input: '$trainee.goals',
+                  as: 'g',
+                  cond: { $eq: ['$$g.isSelected', true] },
+                },
+              },
+            },
+          },
+        },
+
       ])
       return requests
     } catch (err) {
