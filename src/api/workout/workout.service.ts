@@ -182,11 +182,21 @@ export class WorkoutService {
             $sum: {
               $map: {
                 input: {
-                  $filter: {
-                    input: '$instructions',
-                    as: 'instruction',
-                    cond: { $eq: ['$$instruction.isDone', false] },
-                  },
+                  // $filter: {
+                  //   input: '$instructions',
+                  //   as: 'instruction',
+                  //   cond: { $eq: ['$$instruction.isDone', false] },
+                  // },
+                  $slice: [
+                    {
+                      $filter: {
+                        input: '$instructions',
+                        as: 'instruction',
+                        cond: { $eq: ['$$instruction.isDone', false] },
+                      },
+                    },
+                    1 // take only the first unfinished instruction
+                  ],
                 },
                 as: 'instruction',
                 in: '$$instruction.timesPerWeek',
