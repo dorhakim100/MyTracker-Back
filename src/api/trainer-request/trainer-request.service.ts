@@ -3,6 +3,7 @@ import { User } from '../user/user.model'
 import { logger } from '../../services/logger.service'
 import mongoose from 'mongoose'
 import { UserService } from '../user/user.service'
+import { Weight } from '../weight/weight.model'
 
 export class TrainerRequestService {
   static async query(filterBy: any = {}) {
@@ -76,6 +77,116 @@ export class TrainerRequestService {
           },
         },
 
+        // Convert trainee.mealsIds (strings) to ObjectIds for lookup
+        {
+          $addFields: {
+            mealsObjectIds: {
+              $filter: {
+                input: {
+                  $map: {
+                    input: { $ifNull: ['$trainee.mealsIds', []] },
+                    as: 'id',
+                    in: {
+                      $switch: {
+                        branches: [
+                          {
+                            case: { $eq: [{ $type: '$$id' }, 'objectId'] },
+                            then: '$$id',
+                          },
+                          {
+                            case: { $eq: [{ $type: '$$id' }, 'string'] },
+                            then: { $toObjectId: '$$id' },
+                          },
+                        ],
+                        default: null,
+                      },
+                    },
+                  },
+                },
+                as: 'oid',
+                cond: { $ne: ['$$oid', null] },
+              },
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: 'meals',
+            let: { ids: '$mealsObjectIds' },
+            pipeline: [
+              { $match: { $expr: { $in: ['$_id', '$$ids'] } } },
+              {
+                $addFields: { sortIndex: { $indexOfArray: ['$$ids', '$_id'] } },
+              },
+              { $sort: { sortIndex: 1 } },
+              { $project: { sortIndex: 0 } },
+            ],
+            as: 'meals',
+          },
+        },
+        {
+          $set: {
+            'trainee.meals': '$meals',
+          },
+        },
+        { $unset: ['mealsObjectIds', 'meals'] },
+        {
+          $addFields: {
+            weightsObjectIds: {
+              $filter: {
+                input: {
+                  $map: {
+                    input: { $ifNull: ['$trainee.weightsIds', []] },
+                    as: 'id',
+                    in: {
+                      $switch: {
+                        branches: [
+                          {
+                            case: { $eq: [{ $type: '$$id' }, 'objectId'] },
+                            then: '$$id',
+                          },
+                          {
+                            case: { $eq: [{ $type: '$$id' }, 'string'] },
+                            then: { $toObjectId: '$$id' },
+                          },
+                        ],
+                        default: null,
+                      },
+                    },
+                  },
+                },
+                as: 'oid',
+                cond: { $ne: ['$$oid', null] },
+              },
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: 'weights',
+            // Define uid as the user's ObjectId as a string
+            let: { uid: { $toString: '$_id' } },
+            pipeline: [
+              // Match let variable uid with userId, must be $expr and $eq
+              { $match: { $expr: { $eq: ['$userId', '$$uid'] } } },
+              { $sort: { createdAt: -1 } },
+              { $limit: 1 },
+            ],
+            as: '_lastWeight',
+          },
+        },
+        { $set: { lastWeight: { $first: '$_lastWeight' } } },
+        {
+          $project: {
+            trainee: {
+              goalsIds: 0,
+              weightsIds: 0,
+              mealsIds: 0,
+              weightIds: 0,
+
+            }
+          }
+        }
       ])
       return requests
     } catch (err) {

@@ -23,7 +23,15 @@ export const protect = async (
 ) => {
   let token
 
-  const loginToken = req.cookies.loginToken
+  const cookieToken = req.cookies.loginToken
+  const authHeader = req.headers.authorization
+
+  const headerToken = authHeader?.startsWith('Bearer ')
+    ? authHeader.slice(7)
+    : null
+
+  const loginToken = cookieToken || headerToken
+
 
   if (
     // req.headers.authorization &&
