@@ -15,7 +15,7 @@ export class AuthController {
       res.json({ user, loginToken })
     } catch (err: any) {
       logger.error('Failed to Login ' + err)
-      res.status(401).send({ err: 'Failed to Login' })
+      res.status(400).send({ err: 'Failed to Login' })
     }
   }
 
