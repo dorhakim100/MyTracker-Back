@@ -33,6 +33,9 @@ import { logger } from './services/logger.service'
 const app = express()
 const server = http.createServer(app)
 
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../public')))
+}
 // Express App Config
 app.set('trust proxy', 1)
 app.use(cookieParser())
@@ -82,9 +85,7 @@ const allowedOrigins = new Set([
 ])
 
 // Serve static ONLY in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../public')))
-}
+
 const corsOptions: cors.CorsOptions = {
   origin: (origin, cb) => {
     if (!origin) return cb(null, true) // Postman/curl
