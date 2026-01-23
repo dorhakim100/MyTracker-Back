@@ -183,10 +183,9 @@ export class TrainerRequestService {
               weightsIds: 0,
               mealsIds: 0,
               weightIds: 0,
-
-            }
-          }
-        }
+            },
+          },
+        },
       ])
       return requests
     } catch (err) {
