@@ -81,6 +81,10 @@ const allowedOrigins = new Set([
   // 'https://your-frontend-domain.com',
 ])
 
+// Serve static ONLY in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../public')))
+}
 const corsOptions: cors.CorsOptions = {
   origin: (origin, cb) => {
     if (!origin) return cb(null, true) // Postman/curl
@@ -94,11 +98,6 @@ const corsOptions: cors.CorsOptions = {
 
 app.use(cors(corsOptions))
 app.options('*', cors(corsOptions)) // preflight
-
-// Serve static ONLY in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../public/index.html')))
-}
 
 app.all('*', setupAsyncLocalStorage)
 
