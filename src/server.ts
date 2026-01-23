@@ -77,13 +77,25 @@ const allowedOrigins = new Set([
   'capacitor://localhost',
   'ionic://localhost',
 
-  // Your production frontend (if you have one)
-  // 'https://your-frontend-domain.com',
+  // Production domains
+  'https://mytracker-7wb0.onrender.com',
 ])
 
 // Serve static ONLY in production
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../public')))
+  // Serve static files with proper MIME types
+  app.use(
+    express.static(path.join(__dirname, '../public'), {
+      // Don't serve index.html for directory requests - let the catch-all handle it
+      index: false,
+      // Set proper MIME types
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.js')) {
+          res.setHeader('Content-Type', 'application/javascript; charset=utf-8')
+        }
+      },
+    })
+  )
 }
 const corsOptions: cors.CorsOptions = {
   origin: (origin, cb) => {
@@ -123,11 +135,38 @@ app.use('/api/translate', translateRoutes)
 // Setup Socket.IO
 setupSocketAPI(server)
 
-// Serve frontend in production
-app.get('/**', (req, res) => {
-  // res.sendFile(path.resolve('public/index.html'))
-  res.sendFile(path.join(__dirname, '../public/index.html'))
-})
+// Serve frontend in production - must be last route
+// Express static middleware handles static files first, this only catches non-API routes
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res, next) => {
+    // Skip API routes
+    if (req.path.startsWith('/api')) {
+      return next()
+    }
+    // Skip if it looks like a static asset (should have been handled by express.static)
+    // This is a safety check in case express.static didn't find the file
+    const staticExtensions = [
+      '.js',
+      '.css',
+      '.png',
+      '.jpg',
+      '.jpeg',
+      '.gif',
+      '.ico',
+      '.svg',
+      '.woff',
+      '.woff2',
+      '.ttf',
+      '.eot',
+      '.webp',
+      '.json',
+    ]
+    if (staticExtensions.some((ext) => req.path.endsWith(ext))) {
+      return next() // Let it 404 if file doesn't exist
+    }
+    res.sendFile(path.join(__dirname, '../public/index.html'))
+  })
+}
 
 // Database connection
 const connectDB = async () => {
