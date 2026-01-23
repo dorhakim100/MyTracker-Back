@@ -97,7 +97,7 @@ app.options('*', cors(corsOptions)) // preflight
 
 // Serve static ONLY in production
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../public')))
+  app.use(express.static(path.join(__dirname, '../public/index.html')))
 }
 
 app.all('*', setupAsyncLocalStorage)
