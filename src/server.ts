@@ -81,7 +81,7 @@ const allowedOrigins = new Set([
   'ionic://localhost',
 
   // Production domains
-  'https://mytracker-7wb0.onrender.com',
+  'https://mytracker-j6fc.onrender.com',
 ])
 
 // Serve static ONLY in production
