@@ -14,6 +14,15 @@ export class MealService {
       throw err
     }
   }
+  static async getByMealIds(mealIds: string[]) {
+    try {
+      const meals = await Meal.find({ _id: { $in: mealIds } })
+      return meals
+    } catch (err) {
+      logger.error('Failed to get meals by meal ids', err)
+      throw err
+    }
+  }
 
   static async getById(logId: string) {
     try {

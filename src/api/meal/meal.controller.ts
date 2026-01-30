@@ -12,6 +12,16 @@ export class MealController {
       res.status(500).send({ err: 'Failed to get meals' })
     }
   }
+  static async getMealsBulk(req: Request, res: Response) {
+    try {
+      const { mealIds } = req.query as { mealIds: string[] }
+      const meals = await MealService.getByMealIds(mealIds)
+      res.json(meals)
+    } catch (err: any) {
+      logger.error('Failed to get meals bulk', err)
+      res.status(500).send({ err: 'Failed to get meals bulk' })
+    }
+  }
 
   static async getMeal(req: Request, res: Response) {
     try {

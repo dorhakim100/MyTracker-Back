@@ -8,6 +8,7 @@ export interface ILog extends mongoose.Document {
   meal: string
   numberOfServings: number
   source: string
+  mealId?: string
   time: number
   createdBy: string
   name?: string
@@ -22,7 +23,7 @@ const logSchema = new mongoose.Schema(
     // },
     itemId: {
       type: String,
-      required: true,
+      required: false,
     },
     macros: {
       type: Object,
@@ -43,6 +44,10 @@ const logSchema = new mongoose.Schema(
     source: {
       type: String,
       required: true,
+    },
+    mealId: {
+      type: String,
+      required: false,
     },
     time: {
       type: Number,
