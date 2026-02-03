@@ -268,6 +268,7 @@ export class TrainerRequestService {
       // Validate that trainer exists and is actually a trainer
       const trainerId = request.trainerId
       const traineeId = request.traineeId
+      const status = request.status || 'pending'
 
       if (!trainerId || !traineeId) {
         throw new Error('Could not create request')
@@ -305,7 +306,7 @@ export class TrainerRequestService {
 
       const newRequest = await TrainerRequest.create({
         ...request,
-        status: 'pending',
+        status,
       })
 
       return newRequest

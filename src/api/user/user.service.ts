@@ -6,6 +6,7 @@ import { Goal } from '@/types/Goal/Goal'
 import { GoalService } from '../goal/goal.service'
 import { LogService } from '../log/log.service'
 import { WeightService } from '../weight/weight.service'
+import { TrainerRequestService } from '../trainer-request/trainer-request.service'
 
 export class UserService {
   static async query(filterBy: { txt?: string; searchingUserId?: string }) {
@@ -344,6 +345,38 @@ export class UserService {
     }
   }
 
+  static async addTrainee(traineeForm: {
+    trainerId: string
+    email: string
+    fullname: string
+  }) {
+    try {
+      const isExists = await User.findOne({ email: traineeForm.email })
+      if (isExists) {
+        throw new Error('Trainee already exists with this email')
+      }
+
+      const userToCreate = {
+        email: traineeForm.email,
+        details: UserService.getDefaultDetails(traineeForm.fullname),
+        password: '',
+        isAddedByTrainer: true,
+      }
+
+      const trainee = await User.create(userToCreate)
+      const traineeId = (trainee._id as mongoose.Types.ObjectId).toString()
+
+      await TrainerRequestService.create({
+        trainerId: traineeForm.trainerId,
+        traineeId,
+        status: 'approved',
+      })
+      return trainee
+    } catch (err) {
+      logger.error('Failed to add trainee', err)
+      throw err
+    }
+  }
   static getDefaultGoal(): Goal {
     const id = new mongoose.Types.ObjectId().toString()
     return {
@@ -358,6 +391,18 @@ export class UserService {
         carbs: 300,
         fat: 53,
       },
+    }
+  }
+
+  static getDefaultDetails(fullname?: string): IUser['details'] {
+    return {
+      fullname: fullname || '',
+      imgUrl:
+        'https://cdn.pixabay.com/photo/2020/07/01/12/58/icon-5359553_1280.png',
+      birthdate: 946684800000,
+      height: 170,
+      gender: 'male',
+      activity: 'sedentary',
     }
   }
 }

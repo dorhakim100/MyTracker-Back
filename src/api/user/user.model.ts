@@ -19,6 +19,7 @@ export interface IUser extends mongoose.Document {
   goalsIds: string[]
   isTrainer: boolean
   trainersIds?: string[]
+  isAddedByTrainer: boolean
 }
 
 interface UserDetails {
@@ -27,6 +28,7 @@ interface UserDetails {
   birthdate: number
   height: number
   gender: string
+  activity: string
 }
 
 // const defaultGoal = UserService.getDefaultGoal()
@@ -42,15 +44,16 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
+      required: false,
     },
 
     details: {
       type: Object,
       default: {
         fullname: '',
-        imgUrl: '',
-        birthdate: 0,
+        imgUrl:
+          'https://cdn.pixabay.com/photo/2020/07/01/12/58/icon-5359553_1280.png',
+        birthdate: 946684800000,
         height: 170,
         gender: 'male',
         activity: 'sedentary',
@@ -95,6 +98,10 @@ const userSchema = new mongoose.Schema(
     trainersIds: {
       type: [String],
       default: [],
+    },
+    isAddedByTrainer: {
+      type: Boolean,
+      default: false,
     },
   },
   {

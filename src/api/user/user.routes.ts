@@ -7,6 +7,7 @@ const router = Router()
 router.get('/', protect, UserController.getUsers)
 router.get('/remember/:id', UserController.rememberUser)
 router.get('/:id', protect, UserController.getUser)
+router.post('/add-trainee', protect, UserController.addTrainee)
 router.put('/:id', protect, UserController.updateUser)
 router.delete('/:id', protect, UserController.deleteUser)
 

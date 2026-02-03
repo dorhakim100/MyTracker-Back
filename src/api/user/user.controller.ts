@@ -57,4 +57,14 @@ export class UserController {
       res.status(500).send({ err: 'Failed to delete user' })
     }
   }
+
+  static async addTrainee(req: Request, res: Response) {
+    try {
+      const trainee = await UserService.addTrainee(req.body)
+      res.json(trainee)
+    } catch (err: any) {
+      logger.error('Failed to add trainee', err)
+      res.status(500).send({ err: err.message || 'Failed to add trainee' })
+    }
+  }
 }
