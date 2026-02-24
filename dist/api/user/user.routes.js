@@ -8,6 +8,7 @@ const router = (0, express_1.Router)();
 router.get('/', auth_middleware_1.protect, user_controller_1.UserController.getUsers);
 router.get('/remember/:id', user_controller_1.UserController.rememberUser);
 router.get('/:id', auth_middleware_1.protect, user_controller_1.UserController.getUser);
+router.post('/add-trainee', auth_middleware_1.protect, user_controller_1.UserController.addTrainee);
 router.put('/:id', auth_middleware_1.protect, user_controller_1.UserController.updateUser);
 router.delete('/:id', auth_middleware_1.protect, user_controller_1.UserController.deleteUser);
 exports.userRoutes = router;

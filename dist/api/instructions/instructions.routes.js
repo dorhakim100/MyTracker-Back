@@ -1,0 +1,16 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.instructionsRoutes = void 0;
+const express_1 = require("express");
+const instructions_controller_1 = require("./instructions.controller");
+const auth_middleware_1 = require("../../middleware/auth.middleware");
+const router = (0, express_1.Router)();
+router.get('/', instructions_controller_1.InstructionsController.getInstructions);
+router.get('/weekNumberDone', instructions_controller_1.InstructionsController.getWeekNumberDone);
+router.get('/workout/:workoutId', instructions_controller_1.InstructionsController.getInstructionsByWorkoutId);
+router.get('/notes', instructions_controller_1.InstructionsController.getNotesBySessionIdAndExerciseId);
+router.get('/:id', instructions_controller_1.InstructionsController.getInstruction);
+router.post('/', auth_middleware_1.requireAuth, instructions_controller_1.InstructionsController.addInstruction);
+router.put('/:id', auth_middleware_1.requireAuth, instructions_controller_1.InstructionsController.updateInstruction);
+router.delete('/:id', auth_middleware_1.requireAuth, instructions_controller_1.InstructionsController.deleteInstruction);
+exports.instructionsRoutes = router;

@@ -1,0 +1,17 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.sessionRoutes = void 0;
+const express_1 = require("express");
+const session_controller_1 = require("./session.controller");
+const auth_middleware_1 = require("../../middleware/auth.middleware");
+const router = (0, express_1.Router)();
+router.get('/', auth_middleware_1.requireAuth, session_controller_1.SessionController.get);
+router.put('/play/empty', auth_middleware_1.requireAuth, session_controller_1.SessionController.playEmptyWorkout);
+router.put('/play/:id', auth_middleware_1.requireAuth, session_controller_1.SessionController.playWorkout);
+router.post('/', auth_middleware_1.requireAuth, session_controller_1.SessionController.add);
+router.get('/:id', auth_middleware_1.requireAuth, session_controller_1.SessionController.getById);
+router.put('/:id', auth_middleware_1.requireAuth, session_controller_1.SessionController.update);
+router.delete('/:id', auth_middleware_1.requireAuth, session_controller_1.SessionController.delete);
+router.get('/user/:userId', auth_middleware_1.requireAuth, session_controller_1.SessionController.listByUser);
+router.get('/by-date/:userId', auth_middleware_1.requireAuth, session_controller_1.SessionController.getByDate);
+exports.sessionRoutes = router;

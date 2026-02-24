@@ -13,6 +13,7 @@ import { translateRoutes } from './api/translate/translate.routes'
 import { authRoutes } from './api/auth/auth.routes'
 import { userRoutes } from './api/user/user.routes'
 import { logRoutes } from './api/log/log.routes'
+import { menuRoutes } from './api/menu/menu.routes'
 import { dayRoutes } from './api/day/day.routes'
 import { mealRoutes } from './api/meal/meal.routes'
 import { weightRoutes } from './api/weight/weight.routes'
@@ -106,6 +107,7 @@ app.all('*', setupAsyncLocalStorage)
 app.use('/api/auth', authRoutes)
 app.use('/api/user', userRoutes)
 app.use('/api/log', logRoutes)
+app.use('/api/menu', menuRoutes)
 app.use('/api/day', dayRoutes)
 app.use('/api/meal', mealRoutes)
 app.use('/api/weight', weightRoutes)

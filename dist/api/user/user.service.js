@@ -1,192 +1,389 @@
-'use strict'
-var __importDefault =
-  (this && this.__importDefault) ||
-  function (mod) {
-    return mod && mod.__esModule ? mod : { default: mod }
-  }
-Object.defineProperty(exports, '__esModule', { value: true })
-exports.UserService = void 0
-const mongoose_1 = __importDefault(require('mongoose'))
-const user_model_1 = require('./user.model')
-const logger_service_1 = require('../../services/logger.service')
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.UserService = void 0;
+const mongoose_1 = __importDefault(require("mongoose"));
+const user_model_1 = require("./user.model");
+const logger_service_1 = require("../../services/logger.service");
+const goal_service_1 = require("../goal/goal.service");
+const log_service_1 = require("../log/log.service");
+const weight_service_1 = require("../weight/weight.service");
+const trainer_request_service_1 = require("../trainer-request/trainer-request.service");
 class UserService {
-  static async query(filterBy = {}) {
-    try {
-      const users = await user_model_1.User.find(filterBy).select('-password')
-      return users
-    } catch (err) {
-      logger_service_1.logger.error('Failed to query users', err)
-      throw err
-    }
-  }
-  static async getById(userId) {
-    try {
-      const [user] = await user_model_1.User.aggregate([
-        // 1) Find the user
-        { $match: { _id: new mongoose_1.default.Types.ObjectId(userId) } },
-        // 2) Hide password
-        { $project: { password: 0 } },
-        // 3) Normalize `loggedToday` -> ObjectId | null (handles string/ObjectId/missing)
-        {
-          $set: {
-            _loggedTodayOid: {
-              $switch: {
-                branches: [
-                  {
-                    case: {
-                      $and: [
-                        { $eq: [{ $type: '$loggedToday' }, 'string'] },
-                        {
-                          $regexMatch: {
-                            input: '$loggedToday',
-                            regex: '^[0-9a-fA-F]{24}$',
-                          },
-                        },
-                      ],
+    static async query(filterBy) {
+        try {
+            const users = await user_model_1.User.aggregate([
+                {
+                    $match: {
+                        // search by fullname or email
+                        $or: [
+                            { fullname: { $regex: filterBy.txt, $options: 'i' } },
+                            { email: { $regex: filterBy.txt, $options: 'i' } },
+                        ],
+                        // exclude the user who is searching
+                        _id: { $ne: new mongoose_1.default.Types.ObjectId(filterBy.searchingUserId) },
                     },
-                    then: { $toObjectId: '$loggedToday' },
-                  },
-                  {
-                    case: { $eq: [{ $type: '$loggedToday' }, 'objectId'] },
-                    then: '$loggedToday',
-                  },
-                ],
-                default: null,
-              },
-            },
-          },
-        },
-        // 4) Lookup Day by normalized id; inside, keep date & calories and populate logs
-        {
-          $lookup: {
-            from: 'days',
-            let: { dayId: '$_loggedTodayOid' },
-            pipeline: [
-              { $match: { $expr: { $eq: ['$_id', '$$dayId'] } } },
-              // Keep only what we need from Day and normalize its logs (string/ObjectId -> ObjectId[])
-              {
-                $project: {
-                  _id: 1,
-                  date: 1,
-                  calories: 1,
-                  logs: {
-                    $filter: {
-                      input: {
-                        $map: {
-                          input: { $ifNull: ['$logs', []] },
-                          as: 'id',
-                          in: {
-                            $switch: {
-                              branches: [
-                                {
-                                  case: {
-                                    $and: [
-                                      { $eq: [{ $type: '$$id' }, 'string'] },
-                                      {
-                                        $regexMatch: {
-                                          input: '$$id',
-                                          regex: '^[0-9a-fA-F]{24}$',
-                                        },
-                                      },
-                                    ],
-                                  },
-                                  then: { $toObjectId: '$$id' },
-                                },
-                                {
-                                  case: {
-                                    $eq: [{ $type: '$$id' }, 'objectId'],
-                                  },
-                                  then: '$$id',
-                                },
-                              ],
-                              default: null,
-                            },
-                          },
-                        },
-                      },
-                      as: 'oid',
-                      cond: { $ne: ['$$oid', null] },
-                    },
-                  },
                 },
-              },
-              // Populate Day.logs -> full Log docs
-              {
-                $lookup: {
-                  from: 'logs',
-                  localField: 'logs',
-                  foreignField: '_id',
-                  as: 'logs',
-                },
-              },
-            ],
-            as: '_dayAgg',
-          },
-        },
-        // 5) Flatten: user.loggedToday = the Day doc (or null)
-        {
-          $set: {
-            loggedToday: { $first: '$_dayAgg' },
-          },
-        },
-        // 6) Cleanup temp fields
-        { $unset: ['_loggedTodayOid', '_dayAgg'] },
-      ])
-      return user || null
-    } catch (err) {
-      logger_service_1.logger.error(`Failed to get user ${userId}`, err)
-      throw err
-    }
-  }
-  static async getByEmail(email) {
-    try {
-      const user = await user_model_1.User.findOne({ email })
-      const aggregatedUser = await UserService.getById(user?._id)
-      return aggregatedUser
-    } catch (err) {
-      logger_service_1.logger.error(`Failed to get user by email ${email}`, err)
-      throw err
-    }
-  }
-  static async remove(userId) {
-    try {
-      await user_model_1.User.findByIdAndDelete(userId)
-    } catch (err) {
-      logger_service_1.logger.error(`Failed to remove user ${userId}`, err)
-      throw err
-    }
-  }
-  static async update(userId, userToUpdate) {
-    try {
-      const user = await user_model_1.User.findByIdAndUpdate(
-        userId,
-        userToUpdate,
-        {
-          new: true,
+                { $project: { password: 0 } },
+            ]);
+            return users;
         }
-      )
-      const aggregatedUser = await UserService.getById(userId)
-      return aggregatedUser
-    } catch (err) {
-      logger_service_1.logger.error(`Failed to update user ${userId}`, err)
-      throw err
+        catch (err) {
+            logger_service_1.logger.error('Failed to query users', err);
+            throw err;
+        }
     }
-  }
-  static getDefaultGoal() {
-    const id = new mongoose_1.default.Types.ObjectId().toString()
-    return {
-      _id: id,
-      isSelected: true,
-      updatedAt: new Date(),
-      title: 'My Goal',
-      dailyCalories: 2400,
-      macros: {
-        calories: 2400,
-        protein: 180,
-        carbs: 300,
-        fat: 53,
-      },
+    static async getById(userId) {
+        try {
+            const [user] = await user_model_1.User.aggregate([
+                // 1) Find the user
+                { $match: { _id: new mongoose_1.default.Types.ObjectId(userId) } },
+                // 2) Hide password
+                { $project: { password: 0 } },
+                // 3) Normalize `loggedToday` -> ObjectId | null (handles string/ObjectId/missing)
+                {
+                    $set: {
+                        _loggedTodayOid: {
+                            $switch: {
+                                branches: [
+                                    {
+                                        case: {
+                                            $and: [
+                                                { $eq: [{ $type: '$loggedToday' }, 'string'] },
+                                                {
+                                                    $regexMatch: {
+                                                        input: '$loggedToday',
+                                                        regex: '^[0-9a-fA-F]{24}$',
+                                                    },
+                                                },
+                                            ],
+                                        },
+                                        then: { $toObjectId: '$loggedToday' },
+                                    },
+                                    {
+                                        case: { $eq: [{ $type: '$loggedToday' }, 'objectId'] },
+                                        then: '$loggedToday',
+                                    },
+                                ],
+                                default: null,
+                            },
+                        },
+                    },
+                },
+                // 4) Lookup Day by normalized id; inside, keep date & calories and populate logs
+                {
+                    $lookup: {
+                        from: 'days',
+                        let: { dayId: '$_loggedTodayOid' },
+                        pipeline: [
+                            { $match: { $expr: { $eq: ['$_id', '$$dayId'] } } },
+                            // Keep only what we need from Day and normalize its logs (string/ObjectId -> ObjectId[])
+                            {
+                                $project: {
+                                    _id: 1,
+                                    date: 1,
+                                    calories: 1,
+                                    logs: {
+                                        $filter: {
+                                            input: {
+                                                $map: {
+                                                    input: { $ifNull: ['$logs', []] },
+                                                    as: 'id',
+                                                    in: {
+                                                        $switch: {
+                                                            branches: [
+                                                                {
+                                                                    case: {
+                                                                        $and: [
+                                                                            { $eq: [{ $type: '$$id' }, 'string'] },
+                                                                            {
+                                                                                $regexMatch: {
+                                                                                    input: '$$id',
+                                                                                    regex: '^[0-9a-fA-F]{24}$',
+                                                                                },
+                                                                            },
+                                                                        ],
+                                                                    },
+                                                                    then: { $toObjectId: '$$id' },
+                                                                },
+                                                                {
+                                                                    case: {
+                                                                        $eq: [{ $type: '$$id' }, 'objectId'],
+                                                                    },
+                                                                    then: '$$id',
+                                                                },
+                                                            ],
+                                                            default: null,
+                                                        },
+                                                    },
+                                                },
+                                            },
+                                            as: 'oid',
+                                            cond: { $ne: ['$$oid', null] },
+                                        },
+                                    },
+                                },
+                            },
+                            // Populate Day.logs -> full Log docs
+                            {
+                                $lookup: {
+                                    from: 'logs',
+                                    localField: 'logs',
+                                    foreignField: '_id',
+                                    as: 'logs',
+                                },
+                            },
+                        ],
+                        as: '_dayAgg',
+                    },
+                },
+                // 5) Flatten: user.loggedToday = the Day doc (or null)
+                {
+                    $set: {
+                        loggedToday: { $first: '$_dayAgg' },
+                    },
+                },
+                // 6) Cleanup temp fields
+                { $unset: ['_loggedTodayOid', '_dayAgg'] },
+                // 7) Convert mealsIds (strings/ObjectIds) -> ObjectId[]
+                {
+                    $addFields: {
+                        mealsObjectIds: {
+                            $filter: {
+                                input: {
+                                    $map: {
+                                        input: { $ifNull: ['$mealsIds', []] },
+                                        as: 'id',
+                                        in: {
+                                            $switch: {
+                                                branches: [
+                                                    {
+                                                        case: { $eq: [{ $type: '$$id' }, 'objectId'] },
+                                                        then: '$$id',
+                                                    },
+                                                    {
+                                                        case: { $eq: [{ $type: '$$id' }, 'string'] },
+                                                        then: { $toObjectId: '$$id' },
+                                                    },
+                                                ],
+                                                default: null,
+                                            },
+                                        },
+                                    },
+                                },
+                                as: 'oid',
+                                cond: { $ne: ['$$oid', null] },
+                            },
+                        },
+                    },
+                },
+                // 8) Lookup meals by normalized ids
+                {
+                    $lookup: {
+                        from: 'meals',
+                        let: { ids: '$mealsObjectIds' },
+                        pipeline: [
+                            { $match: { $expr: { $in: ['$_id', '$$ids'] } } },
+                            {
+                                $addFields: { sortIndex: { $indexOfArray: ['$$ids', '$_id'] } },
+                            },
+                            { $sort: { sortIndex: 1 } },
+                            { $project: { sortIndex: 0 } },
+                        ],
+                        as: 'meals',
+                    },
+                },
+                {
+                    $addFields: {
+                        weightsObjectIds: {
+                            $filter: {
+                                input: {
+                                    $map: {
+                                        input: { $ifNull: ['$weightsIds', []] },
+                                        as: 'id',
+                                        in: {
+                                            $switch: {
+                                                branches: [
+                                                    {
+                                                        case: { $eq: [{ $type: '$$id' }, 'objectId'] },
+                                                        then: '$$id',
+                                                    },
+                                                    {
+                                                        case: { $eq: [{ $type: '$$id' }, 'string'] },
+                                                        then: { $toObjectId: '$$id' },
+                                                    },
+                                                ],
+                                                default: null,
+                                            },
+                                        },
+                                    },
+                                },
+                                as: 'oid',
+                                cond: { $ne: ['$$oid', null] },
+                            },
+                        },
+                    },
+                },
+                {
+                    $lookup: {
+                        from: 'weights',
+                        // Define uid as the user's ObjectId as a string
+                        let: { uid: { $toString: '$_id' } },
+                        pipeline: [
+                            // Match let variable uid with userId, must be $expr and $eq
+                            { $match: { $expr: { $eq: ['$userId', '$$uid'] } } },
+                            { $sort: { createdAt: -1 } },
+                            { $limit: 1 },
+                        ],
+                        as: '_lastWeight',
+                    },
+                },
+                { $set: { lastWeight: { $first: '$_lastWeight' } } },
+                {
+                    $project: {
+                        mealsObjectIds: 0,
+                        weightsObjectIds: 0,
+                        mealsIds: 0,
+                        weightsIds: 0,
+                        _lastWeight: 0,
+                        'lastWeight.userId': 0,
+                    },
+                },
+                {
+                    $lookup: {
+                        from: 'goals',
+                        let: { uid: '$_id' },
+                        pipeline: [
+                            {
+                                $match: { $expr: { $eq: ['$userId', { $toString: '$$uid' }] } },
+                            },
+                            { $sort: { startDate: -1 } },
+                        ],
+                        as: 'goals',
+                    },
+                },
+                {
+                    $set: {
+                        currGoal: {
+                            $first: {
+                                $filter: {
+                                    input: '$goals',
+                                    as: 'g',
+                                    cond: { $eq: ['$$g.isSelected', true] },
+                                },
+                            },
+                        },
+                    },
+                },
+                {
+                    $project: {
+                        mealsObjectIds: 0,
+                        weightsObjectIds: 0,
+                        mealsIds: 0,
+                        weightsIds: 0,
+                        goalsIds: 0,
+                    },
+                },
+            ]);
+            return user || null;
+        }
+        catch (err) {
+            logger_service_1.logger.error(`Failed to get user ${userId}`, err);
+            throw err;
+        }
     }
-  }
+    static async getByEmail(email) {
+        try {
+            const user = await user_model_1.User.findOne({ email });
+            const aggregatedUser = await UserService.getById(user?._id);
+            return aggregatedUser;
+        }
+        catch (err) {
+            logger_service_1.logger.error(`Failed to get user by email ${email}`, err);
+            throw err;
+        }
+    }
+    static async remove(userId) {
+        try {
+            await user_model_1.User.findByIdAndDelete(userId);
+            // no need to await these
+            log_service_1.LogService.removeAllByUserId(userId);
+            goal_service_1.GoalService.removeAllByUserId(userId);
+            weight_service_1.WeightService.removeAllByUserId(userId);
+        }
+        catch (err) {
+            logger_service_1.logger.error(`Failed to remove user ${userId}`, err);
+            throw err;
+        }
+    }
+    static async update(userId, userToUpdate) {
+        try {
+            delete userToUpdate.goals;
+            delete userToUpdate.currGoal;
+            const user = await user_model_1.User.findByIdAndUpdate(userId, userToUpdate, {
+                new: true,
+            });
+            const aggregatedUser = await UserService.getById(userId);
+            return aggregatedUser;
+        }
+        catch (err) {
+            logger_service_1.logger.error(`Failed to update user ${userId}`, err);
+            throw err;
+        }
+    }
+    static async addTrainee(traineeForm) {
+        try {
+            const isExists = await user_model_1.User.findOne({ email: traineeForm.email });
+            if (isExists) {
+                throw new Error('Trainee already exists with this email');
+            }
+            const userToCreate = {
+                email: traineeForm.email,
+                details: UserService.getDefaultDetails(traineeForm.fullname),
+                password: '',
+                isAddedByTrainer: true,
+            };
+            const trainee = await user_model_1.User.create(userToCreate);
+            const traineeId = trainee._id.toString();
+            await trainer_request_service_1.TrainerRequestService.create({
+                trainerId: traineeForm.trainerId,
+                traineeId,
+                status: 'approved',
+            });
+            return trainee;
+        }
+        catch (err) {
+            logger_service_1.logger.error('Failed to add trainee', err);
+            throw err;
+        }
+    }
+    static getDefaultGoal() {
+        const id = new mongoose_1.default.Types.ObjectId().toString();
+        return {
+            _id: id,
+            isSelected: true,
+            updatedAt: new Date(),
+            title: 'My Goal',
+            dailyCalories: 2400,
+            macros: {
+                calories: 2400,
+                protein: 180,
+                carbs: 300,
+                fat: 53,
+            },
+        };
+    }
+    static getDefaultDetails(fullname) {
+        return {
+            fullname: fullname || '',
+            imgUrl: 'https://cdn.pixabay.com/photo/2020/07/01/12/58/icon-5359553_1280.png',
+            birthdate: 946684800000,
+            height: 170,
+            gender: 'male',
+            activity: 'sedentary',
+        };
+    }
 }
-exports.UserService = UserService
+exports.UserService = UserService;

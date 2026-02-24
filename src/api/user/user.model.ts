@@ -20,6 +20,7 @@ export interface IUser extends mongoose.Document {
   isTrainer: boolean
   trainersIds?: string[]
   isAddedByTrainer: boolean
+  isFixedMenu: boolean
 }
 
 interface UserDetails {
@@ -100,6 +101,10 @@ const userSchema = new mongoose.Schema(
       default: [],
     },
     isAddedByTrainer: {
+      type: Boolean,
+      default: false,
+    },
+    isFixedMenu: {
       type: Boolean,
       default: false,
     },

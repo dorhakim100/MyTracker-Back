@@ -12,7 +12,7 @@ const logSchema = new mongoose_1.default.Schema({
     // },
     itemId: {
         type: String,
-        required: true,
+        required: false,
     },
     macros: {
         type: Object,
@@ -26,9 +26,17 @@ const logSchema = new mongoose_1.default.Schema({
         type: Number,
         required: true,
     },
+    servingSize: {
+        type: Number,
+        required: true,
+    },
     source: {
         type: String,
         required: true,
+    },
+    mealId: {
+        type: String,
+        required: false,
     },
     time: {
         type: Number,
@@ -39,6 +47,10 @@ const logSchema = new mongoose_1.default.Schema({
         type: String,
         // ref: 'User',
         required: true,
+    },
+    name: {
+        type: String,
+        required: false,
     },
 }, {
     timestamps: true,

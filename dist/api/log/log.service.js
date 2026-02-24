@@ -26,6 +26,8 @@ class LogService {
     }
     static async add(log) {
         try {
+            if (log.itemId === '')
+                log.itemId = `custom-log`;
             const addedLog = await log_model_1.Log.create(log);
             return addedLog;
         }
@@ -52,6 +54,15 @@ class LogService {
         }
         catch (err) {
             logger_service_1.logger.error(`Failed to remove log ${logId}`, err);
+            throw err;
+        }
+    }
+    static async removeAllByUserId(userId) {
+        try {
+            await log_model_1.Log.deleteMany({ createdBy: userId });
+        }
+        catch (err) {
+            logger_service_1.logger.error(`Failed to remove all logs by user ${userId}`, err);
             throw err;
         }
     }

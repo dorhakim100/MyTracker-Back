@@ -7,7 +7,8 @@ const auth_service_1 = require("../auth/auth.service");
 class UserController {
     static async getUsers(req, res) {
         try {
-            const users = await user_service_1.UserService.query();
+            const filter = req.query;
+            const users = await user_service_1.UserService.query(filter);
             res.json(users);
         }
         catch (err) {
@@ -55,6 +56,16 @@ class UserController {
         catch (err) {
             logger_service_1.logger.error('Failed to delete user', err);
             res.status(500).send({ err: 'Failed to delete user' });
+        }
+    }
+    static async addTrainee(req, res) {
+        try {
+            const trainee = await user_service_1.UserService.addTrainee(req.body);
+            res.json(trainee);
+        }
+        catch (err) {
+            logger_service_1.logger.error('Failed to add trainee', err);
+            res.status(500).send({ err: err.message || 'Failed to add trainee' });
         }
     }
 }

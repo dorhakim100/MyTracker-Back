@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.weightRoutes = void 0;
+const express_1 = require("express");
+const weight_controller_1 = require("./weight.controller");
+const auth_middleware_1 = require("../../middleware/auth.middleware");
+const router = (0, express_1.Router)();
+router.get('/', auth_middleware_1.requireAuth, weight_controller_1.WeightController.getWeightsByUser);
+router.get('/:id', auth_middleware_1.requireAuth, weight_controller_1.WeightController.getWeightById);
+router.post('/', auth_middleware_1.requireAuth, weight_controller_1.WeightController.add);
+router.put('/:id', auth_middleware_1.requireAuth, weight_controller_1.WeightController.update);
+router.delete('/:id', auth_middleware_1.requireAuth, weight_controller_1.WeightController.remove);
+exports.weightRoutes = router;

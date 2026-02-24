@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.workoutRoutes = void 0;
+const express_1 = require("express");
+const workout_controller_1 = require("./workout.controller");
+const auth_middleware_1 = require("../../middleware/auth.middleware");
+const router = (0, express_1.Router)();
+router.get('/', workout_controller_1.WorkoutController.getWorkouts);
+router.get('/:id', workout_controller_1.WorkoutController.getWorkout);
+router.post('/', auth_middleware_1.requireAuth, workout_controller_1.WorkoutController.addWorkout);
+router.put('/:id', auth_middleware_1.requireAuth, workout_controller_1.WorkoutController.updateWorkout);
+router.delete('/:id', auth_middleware_1.requireAuth, workout_controller_1.WorkoutController.deleteWorkout);
+exports.workoutRoutes = router;
