@@ -39,6 +39,7 @@ export class MenuController {
   ) {
     try {
       const menu = req.body
+
       const addedMenu = await MenuService.add(menu)
       res.json(addedMenu)
     } catch (err: any) {
@@ -49,8 +50,6 @@ export class MenuController {
 
   static async selectMenu(req: Request, res: Response) {
     try {
-      console.log(req.body)
-
       const { menu } = req.body
       const savedMenu = await MenuService.select(menu)
       res.json(savedMenu)

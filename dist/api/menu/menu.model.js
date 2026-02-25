@@ -14,6 +14,8 @@ const menuSchema = new mongoose_1.default.Schema({
         type: [{ type: mongoose_1.default.Schema.Types.ObjectId, ref: 'Log' }],
         default: () => [],
     },
+    isSelected: { type: Boolean, default: false },
+    name: { type: String, required: false, default: 'New Menu' },
 }, {
     timestamps: true,
     versionKey: false,

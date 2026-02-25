@@ -35,6 +35,7 @@ export class MenuService {
   static async add(menu: Partial<IMenu>) {
     try {
       const addedMenu = await Menu.create(menu)
+
       return addedMenu.populate('menuLogs')
     } catch (err) {
       logger.error('Failed to add menu', err)
@@ -65,15 +66,13 @@ export class MenuService {
 
   static async select(menu: IMenu & { _id: string }) {
     try {
-      console.log(menu)
-
       const { userId, _id: menuId } = menu
       await Menu.updateMany({ userId }, { $set: { isSelected: false } })
       const savedMenu = await Menu.findByIdAndUpdate(
         menuId,
         { isSelected: true },
         { new: true }
-      )
+      ).populate('menuLogs')
       return savedMenu
     } catch (err) {
       logger.error(`Failed to select menu ${menu._id}`, err)

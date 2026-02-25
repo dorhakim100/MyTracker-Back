@@ -9,6 +9,7 @@ router.get('/', menu_controller_1.MenuController.getMenus);
 router.get('/user/:userId', menu_controller_1.MenuController.getMenusByUser);
 router.get('/:id', menu_controller_1.MenuController.getMenu);
 router.post('/', auth_middleware_1.requireAuth, menu_controller_1.MenuController.addMenu);
+router.put('/select', auth_middleware_1.requireAuth, menu_controller_1.MenuController.selectMenu);
 router.put('/:id', auth_middleware_1.requireAuth, menu_controller_1.MenuController.updateMenu);
 router.delete('/:id', auth_middleware_1.requireAuth, menu_controller_1.MenuController.deleteMenu);
 exports.menuRoutes = router;

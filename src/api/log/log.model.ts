@@ -12,6 +12,7 @@ export interface ILog extends mongoose.Document {
   time: number
   createdBy: string
   name?: string
+  isFixedMenuLog?: boolean
   // imgUrl?: string
 }
 
@@ -62,6 +63,10 @@ const logSchema = new mongoose.Schema(
     name: {
       type: String,
       required: false,
+    },
+    isFixedMenuLog: {
+      type: Boolean,
+      default: false,
     },
   },
   {

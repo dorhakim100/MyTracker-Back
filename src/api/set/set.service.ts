@@ -104,8 +104,6 @@ export class SetService {
   static async bulkSave(sets: Partial<ISet>[]) {
     try {
       const sanitizedSets = sets.map((set) => this.sanitizeRpeRir(set))
-      console.log('sanitizedSets', sanitizedSets)
-
       const savedSets = await Set.insertMany(sanitizedSets)
       return savedSets
     } catch (err) {

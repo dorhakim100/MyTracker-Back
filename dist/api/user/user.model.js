@@ -73,6 +73,10 @@ const userSchema = new mongoose_1.default.Schema({
         type: Boolean,
         default: false,
     },
+    isFixedMenu: {
+        type: Boolean,
+        default: false,
+    },
 }, {
     timestamps: true,
     versionKey: false,

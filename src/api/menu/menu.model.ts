@@ -3,8 +3,8 @@ import mongoose from 'mongoose'
 export interface IMenu {
   userId: string
   menuLogs: mongoose.Types.ObjectId[]
-  name: string
   isSelected: boolean
+  name: string
 }
 
 const menuSchema = new mongoose.Schema(
@@ -17,11 +17,8 @@ const menuSchema = new mongoose.Schema(
       type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Log' }],
       default: () => [],
     },
-    name: {
-      type: String,
-      required: true,
-    },
     isSelected: { type: Boolean, default: false },
+    name: { type: String, required: false, default: 'New Menu' },
   },
   {
     timestamps: true,
@@ -29,4 +26,7 @@ const menuSchema = new mongoose.Schema(
   }
 )
 
-export const Menu = mongoose.model<IMenu>('Menu', menuSchema)
+export const Menu = mongoose.model<IMenu & mongoose.Document>(
+  'Menu',
+  menuSchema
+)

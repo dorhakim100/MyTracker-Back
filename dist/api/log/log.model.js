@@ -52,6 +52,10 @@ const logSchema = new mongoose_1.default.Schema({
         type: String,
         required: false,
     },
+    isFixedMenuLog: {
+        type: Boolean,
+        default: false,
+    },
 }, {
     timestamps: true,
     versionKey: false,
