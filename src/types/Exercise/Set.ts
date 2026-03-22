@@ -15,5 +15,7 @@ export interface SetFilter {
   userId?: string
   from?: Date
   to?: Date
+  skip?: number
+  limit?: number
 }
 

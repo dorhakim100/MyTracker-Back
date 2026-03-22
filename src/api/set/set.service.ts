@@ -42,14 +42,22 @@ export class SetService {
   static async query(filterBy: SetFilter = {}) {
     try {
       logger.info('filterBy', filterBy)
-      const { from: fromRaw, to: toRaw, ...rest } = filterBy
+      const { from: fromRaw, to: toRaw, skip: skipRaw, limit: limitRaw, ...rest } = filterBy
       const from = fromRaw ? new Date(fromRaw) : undefined
+      const skip = Number(skipRaw) || 0
+      const limit = Number(limitRaw) || 0
+
       const criteria: Record<string, unknown> = { ...rest, isDone: true }
       if (from) criteria.createdAt = { $gte: from }
+      logger.info('criteria', criteria)
 
-      const sets = await Set.find(criteria).sort({
-        setNumber: 1,
-      })
+      let query = Set.find(criteria)
+      query = query.sort({ createdAt: -1, setNumber: 1 })
+
+      if (skip > 0) query = query.skip(skip)
+      if (limit > 0) query = query.limit(limit)
+
+      const sets = await query
       return sets
     } catch (err) {
       logger.error('Failed to query sets', err)
