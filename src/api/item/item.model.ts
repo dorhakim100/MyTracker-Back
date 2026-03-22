@@ -11,6 +11,7 @@ export interface IItem extends mongoose.Document {
   macros: Macros
   type: 'food' | 'product' | 'meal' | 'custom' | ''
   items?: MealItem[] // for meal type
+  isImageSearched?: boolean
 }
 
 const itemSchema = new mongoose.Schema(
@@ -44,6 +45,10 @@ const itemSchema = new mongoose.Schema(
     items: {
       type: [Object],
       required: false,
+    },
+    isImageSearched: {
+      type: Boolean,
+      default: false,
     },
   },
   {
