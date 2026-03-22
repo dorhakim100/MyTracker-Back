@@ -7,3 +7,13 @@ export interface Set {
   rir?: ExpectedActual<number>
   isDone: boolean
 }
+
+export interface SetFilter {
+  exerciseId?: string
+  sessionId?: string
+  workoutId?: string
+  userId?: string
+  from?: Date
+  to?: Date
+}
+

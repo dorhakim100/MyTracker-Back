@@ -1,6 +1,7 @@
 import { Set, ISet } from './set.model'
 import { logger } from '../../services/logger.service'
 import mongoose from 'mongoose'
+import { SetFilter } from '@/types/Exercise/Set'
 
 export class SetService {
   /**
@@ -38,9 +39,15 @@ export class SetService {
 
     return sanitized
   }
-  static async query(filterBy = {}) {
+  static async query(filterBy: SetFilter = {}) {
     try {
-      const sets = await Set.find({ ...filterBy, isDone: true }).sort({
+      logger.info('filterBy', filterBy)
+      const { from: fromRaw, to: toRaw, ...rest } = filterBy
+      const from = fromRaw ? new Date(fromRaw) : undefined
+      const criteria: Record<string, unknown> = { ...rest, isDone: true }
+      if (from) criteria.createdAt = { $gte: from }
+
+      const sets = await Set.find(criteria).sort({
         setNumber: 1,
       })
       return sets
