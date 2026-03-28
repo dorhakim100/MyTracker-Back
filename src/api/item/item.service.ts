@@ -30,8 +30,15 @@ export class ItemService {
         translateSign
       )
       const normalizedTranslatedTerm = this.normalizeSearchTerm(translatedTerm)
+      logger.info(`searchTerm: ${searchTerm}`)
       const items = await ItemModel.find({
         $or: [
+          {
+            name: {
+              $regex: searchTerm,
+              $options: 'i',
+            },
+          },
           {
             searchTerm: {
               $elemMatch: {
@@ -60,12 +67,12 @@ export class ItemService {
 
       const meals = (await MealService.query({
         $or: [
-          { name: { $regex: normalizedTerm, $options: 'i' } },
+          { name: { $regex: searchTerm, $options: 'i' } },
           { name: { $regex: normalizedTranslatedTerm, $options: 'i' } },
         ],
       })) as unknown as IItem[]
 
-      return [...meals, ...items]
+      return [ ...items,...meals]
     } catch (err) {
       logger.error(`Failed to get items by search term ${searchTerm}`, err)
       throw err
