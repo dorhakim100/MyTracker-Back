@@ -242,7 +242,7 @@ export class InstructionsService {
       // Build update object with $unset for fields that need to be removed from nested sets
       const update: any = { ...sanitizedInstruction }
 
-      const isFinished = instructionToUpdate?.exercises?.every((exercise) =>
+      const isFinished = instructionToUpdate.isFinished || instructionToUpdate?.exercises?.every((exercise) =>
         exercise.sets.every((set) => set.isDone)
       )
 
