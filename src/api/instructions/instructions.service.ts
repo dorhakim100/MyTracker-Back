@@ -242,9 +242,10 @@ export class InstructionsService {
       // Build update object with $unset for fields that need to be removed from nested sets
       const update: any = { ...sanitizedInstruction }
 
-      const isFinished = instructionToUpdate.isFinished || instructionToUpdate?.exercises?.every((exercise) =>
-        exercise.sets.every((set) => set.isDone)
-      )
+      const isFinished = instructionToUpdate.isFinished
+      //  || instructionToUpdate?.exercises?.every((exercise) =>
+      //   exercise.sets.every((set) => set.isDone)
+      // )
 
       // For nested arrays, we need to ensure the update properly removes RPE/RIR
       // MongoDB will handle this when we update the entire exercises array
