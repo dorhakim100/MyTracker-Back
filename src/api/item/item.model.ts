@@ -6,7 +6,8 @@ import { MealItem } from '@/types/MealItem/MealItem'
 export interface IItem extends mongoose.Document {
   name: string
   searchId?: string
-  searchTerm: string // Normalized search term for caching
+  searchTerm?: string // Normalized search term for caching
+  searchTerms?: string[] // Normalized search terms for caching
   image?: string
   macros: Macros
   type: 'food' | 'product' | 'meal' | 'custom' | ''
@@ -29,6 +30,12 @@ const itemSchema = new mongoose.Schema(
       type: String,
       required: false,
       index: true,
+    },
+    searchTerms: {
+      type: [String],
+      required: false,
+      index: true,
+      default: [],
     },
     image: {
       type: String,
