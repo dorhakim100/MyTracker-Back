@@ -31,6 +31,7 @@ import { bodyFatRoutes } from './api/body-fat/body-fat.routes'
 import { setupSocketAPI } from './services/socket/socket.service'
 import { setupAsyncLocalStorage } from './middleware/setupAls.middleware'
 import { logger } from './services/logger.service'
+import { startBodyFatCleanupCron } from './jobs/body-fat-cleanup.cron'
 
 const app = express()
 const server = http.createServer(app)
@@ -152,6 +153,8 @@ const connectDB = async () => {
 const port = process.env.PORT || 3030
 
 connectDB().then(() => {
+  startBodyFatCleanupCron()
+
   server.listen(port, () => {
     logger.info('Server is running on port: ' + port)
   })
