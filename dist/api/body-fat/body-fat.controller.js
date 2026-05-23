@@ -6,11 +6,11 @@ const logger_service_1 = require("../../services/logger.service");
 class BodyFatController {
     static async estimate(req, res) {
         try {
-            const { userId, img } = req.body;
-            if (!userId || !img) {
-                return res.status(400).send({ err: 'userId and img are required' });
+            const { userId, imageUrl, weightKg } = req.body;
+            if (!userId || !imageUrl || !weightKg) {
+                return res.status(400).send({ err: 'userId, imageUrl, and weightKg are required' });
             }
-            const result = await body_fat_service_1.BodyFatService.estimate(userId, img);
+            const result = await body_fat_service_1.BodyFatService.estimate(userId, imageUrl, weightKg);
             res.json(result);
         }
         catch (err) {

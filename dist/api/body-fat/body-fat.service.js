@@ -3,28 +3,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.BodyFatService = void 0;
 const body_fat_model_1 = require("./body-fat.model");
 const body_fat_gemini_1 = require("./gemini/body-fat.gemini");
-const body_fat_validation_1 = require("./body-fat.validation");
 const logger_service_1 = require("../../services/logger.service");
 class BodyFatService {
-    static async estimate(userId, img) {
+    static async estimate(userId, imageUrl, weightKg) {
         if (!userId) {
-            throw Object.assign(new Error('userId is required'), { statusCode: 400 });
+            throw new Error('userId is required');
         }
-        if (!img) {
-            throw Object.assign(new Error('img is required'), { statusCode: 400 });
-        }
-        if (!(0, body_fat_validation_1.isValidCloudinaryUrl)(img)) {
-            throw Object.assign(new Error('img must be a valid Cloudinary HTTPS URL'), { statusCode: 400 });
+        if (!imageUrl) {
+            throw new Error('imageUrl is required');
         }
         let geminiResult;
         try {
-            geminiResult = await body_fat_gemini_1.BodyFatGeminiService.estimateFromImageUrl(img);
+            geminiResult = await body_fat_gemini_1.BodyFatGeminiService.estimateFromImageUrl(imageUrl, weightKg);
         }
         catch (err) {
             logger_service_1.logger.error('BodyFatGeminiService.estimateFromImageUrl failed', err);
-            throw Object.assign(new Error('Failed to analyze image'), {
-                statusCode: 503,
-            });
+            throw new Error('Failed to analyze image');
         }
         try {
             const saved = await body_fat_model_1.BodyFatEstimate.create({
@@ -32,10 +26,11 @@ class BodyFatService {
                 minPercent: geminiResult.minPercent,
                 maxPercent: geminiResult.maxPercent,
                 note: geminiResult.note,
-                img,
+                imageUrl,
+                weightKg,
                 createdAt: Date.now(),
             });
-            return BodyFatService.toResponse(saved);
+            return { ...BodyFatService.toResponse(saved), status: 'ok' };
         }
         catch (err) {
             logger_service_1.logger.error('BodyFatService.estimate persist failed', err);
@@ -49,7 +44,7 @@ class BodyFatService {
             minPercent: doc.minPercent,
             maxPercent: doc.maxPercent,
             note: doc.note,
-            img: doc.img,
+            imageUrl: doc.imageUrl,
             createdAt: doc.createdAt,
         };
     }

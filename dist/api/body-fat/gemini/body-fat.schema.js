@@ -15,7 +15,7 @@ exports.bodyFatResponseSchema = {
         },
         note: {
             type: generative_ai_1.SchemaType.STRING,
-            description: 'Short note including uncertainty and that this is not medical advice',
+            description: 'Short note describing the physique',
         },
     },
     required: ['minPercent', 'maxPercent', 'note'],

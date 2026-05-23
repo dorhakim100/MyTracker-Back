@@ -7,7 +7,7 @@ const body_fat_validation_1 = require("../body-fat.validation");
 const body_fat_prompt_1 = require("./body-fat.prompt");
 const body_fat_schema_1 = require("./body-fat.schema");
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 async function fetchImageAsBase64(imageUrl) {
     const response = await fetch(imageUrl, { signal: AbortSignal.timeout(15000) });
@@ -38,7 +38,7 @@ function parseGeminiEstimate(raw) {
     return { ...clamped, note };
 }
 class BodyFatGeminiService {
-    static async estimateFromImageUrl(imageUrl) {
+    static async estimateFromImageUrl(imageUrl, weightKg) {
         if (!GEMINI_API_KEY) {
             throw new Error('GEMINI_API_KEY is not configured');
         }
@@ -52,7 +52,7 @@ class BodyFatGeminiService {
             },
         });
         const result = await model.generateContent([
-            { text: body_fat_prompt_1.BODY_FAT_ESTIMATE_PROMPT },
+            { text: (0, body_fat_prompt_1.getPrompt)(weightKg) },
             {
                 inlineData: {
                     mimeType: imageData.mimeType,

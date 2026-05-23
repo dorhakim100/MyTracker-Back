@@ -156,3 +156,4 @@ connectDB().then(() => {
     logger.info('Server is running on port: ' + port)
   })
 })
+
