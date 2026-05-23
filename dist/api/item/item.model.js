@@ -20,6 +20,12 @@ const itemSchema = new mongoose_1.default.Schema({
         required: false,
         index: true,
     },
+    searchTerms: {
+        type: [String],
+        required: false,
+        index: true,
+        default: [],
+    },
     image: {
         type: String,
     },
@@ -35,6 +41,10 @@ const itemSchema = new mongoose_1.default.Schema({
     items: {
         type: [Object],
         required: false,
+    },
+    isImageSearched: {
+        type: Boolean,
+        default: false,
     },
 }, {
     timestamps: true,

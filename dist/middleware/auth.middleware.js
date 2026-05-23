@@ -54,9 +54,19 @@ function requireAuth(req, res, next) {
     const loggedinUser = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
     if (!loggedinUser)
         return res.status(401).send('Not Authenticated');
-    const { id, userId } = req.body;
-    if (id !== loggedinUser.id)
+    const { id } = req.body;
+    const bodyUserId = req.body.userId;
+    const queryUserId = typeof req.query.userId === 'string' ? req.query.userId : undefined;
+    const requestedUserId = bodyUserId ?? queryUserId;
+    const tokenUserId = loggedinUser._id?.toString() ?? loggedinUser.id?.toString();
+    if (id !== undefined && id !== loggedinUser.id) {
         return res.status(401).send('Not Authenticated');
+    }
+    if (requestedUserId &&
+        tokenUserId &&
+        requestedUserId !== tokenUserId) {
+        return res.status(401).send('Not Authenticated');
+    }
     // if (config.isGuestMode && !loggedinUser) {
     //   req.loggedinUser = { _id: '', fullname: 'Guest' }
     //   return next()

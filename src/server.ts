@@ -26,6 +26,7 @@ import { setRoutes } from './api/set/set.routes'
 import { itemRoutes } from './api/item/item.routes'
 import { exerciseRoutes } from './api/exercise/exercise.routes'
 import { chatGPTRoutes } from './api/chatGPT/gpt.routes'
+import { bodyFatRoutes } from './api/body-fat/body-fat.routes'
 
 import { setupSocketAPI } from './services/socket/socket.service'
 import { setupAsyncLocalStorage } from './middleware/setupAls.middleware'
@@ -120,6 +121,7 @@ app.use('/api/set', setRoutes)
 app.use('/api/item', itemRoutes)
 app.use('/api/exercise', exerciseRoutes)
 app.use('/api/chatgpt', chatGPTRoutes)
+app.use('/api/body-fat', bodyFatRoutes)
 
 app.use('/api/translate', translateRoutes)
 

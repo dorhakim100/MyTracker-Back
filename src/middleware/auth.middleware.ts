@@ -4,7 +4,8 @@ import { IUser } from '../api/user/user.model'
 import { asyncLocalStorage, getLoggedinUser } from './setupAls.middleware'
 
 interface JWTPayload {
-  id: string
+  _id?: string
+  id?: string
   email: string
   fullname: string
   iat: number
@@ -93,9 +94,26 @@ export function requireAuth(
 
   if (!loggedinUser) return res.status(401).send('Not Authenticated')
 
-  const { id, userId } = req.body
+  const { id } = req.body
+  const bodyUserId = req.body.userId as string | undefined
+  const queryUserId =
+    typeof req.query.userId === 'string' ? req.query.userId : undefined
+  const requestedUserId = bodyUserId ?? queryUserId
 
-  if (id !== loggedinUser.id) return res.status(401).send('Not Authenticated')
+  const tokenUserId =
+    loggedinUser._id?.toString() ?? loggedinUser.id?.toString()
+
+  if (id !== undefined && id !== loggedinUser.id) {
+    return res.status(401).send('Not Authenticated')
+  }
+
+  if (
+    requestedUserId &&
+    tokenUserId &&
+    requestedUserId !== tokenUserId
+  ) {
+    return res.status(401).send('Not Authenticated')
+  }
 
   // if (config.isGuestMode && !loggedinUser) {
   //   req.loggedinUser = { _id: '', fullname: 'Guest' }

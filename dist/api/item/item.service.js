@@ -11,7 +11,16 @@ class ItemService {
      * Normalizes a search term for consistent caching
      */
     static normalizeSearchTerm(term) {
-        return term.toLowerCase().trim();
+        if (!term)
+            return '';
+        return term
+            .toLowerCase()
+            .normalize('NFKD')
+            .replace(/[\u0591-\u05C7]/g, '') // Hebrew nikud
+            .replace(/[\u0300-\u036f]/g, '') // general combining marks
+            .replace(/[״׳'"]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
     }
     static escapeRegex(term) {
         return term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -21,49 +30,271 @@ class ItemService {
      */
     static async getBySearchTerm(searchTerm) {
         try {
-            const translateSign = (0, utils_1.isEnglishWord)(searchTerm) ? 'he' : 'en';
             const normalizedTerm = this.normalizeSearchTerm(searchTerm);
+            const translateSign = (0, utils_1.isEnglishWord)(normalizedTerm) ? 'he' : 'en';
             const translatedTerm = await translate_service_1.TranslateService.translate(normalizedTerm, translateSign);
             const normalizedTranslatedTerm = this.normalizeSearchTerm(translatedTerm);
-            const items = await item_model_1.ItemModel.find({
-                $or: [
-                    {
-                        searchTerm: {
-                            $elemMatch: {
-                                $regex: this.escapeRegex(normalizedTerm),
-                                $options: 'i',
+            logger_service_1.logger.info(`searchTerm: ${searchTerm}`);
+            logger_service_1.logger.info(`normalizedTerm: ${normalizedTerm}`);
+            logger_service_1.logger.info(`normalizedTranslatedTerm: ${normalizedTranslatedTerm}`);
+            const searchVariants = this.getSearchVariants(normalizedTerm);
+            const translatedVariants = this.getSearchVariants(normalizedTranslatedTerm);
+            const allVariants = [
+                ...new Set([
+                    normalizedTerm,
+                    normalizedTranslatedTerm,
+                    ...searchVariants,
+                    ...translatedVariants,
+                ].map(term => this.normalizeSearchTerm(term))),
+            ].filter(Boolean);
+            const escapedVariants = allVariants.map(term => this.escapeRegex(term));
+            const items = await item_model_1.ItemModel.aggregate([
+                {
+                    $match: {
+                        $or: escapedVariants.flatMap(term => [
+                            {
+                                name: {
+                                    $regex: term,
+                                    $options: 'i',
+                                },
+                            },
+                            {
+                                searchTerms: {
+                                    $elemMatch: {
+                                        $regex: term,
+                                        $options: 'i',
+                                    },
+                                },
+                            },
+                            // temporary fallback for old documents
+                            {
+                                searchTerm: {
+                                    $regex: term,
+                                    $options: 'i',
+                                },
+                            },
+                        ]),
+                    },
+                },
+                {
+                    $addFields: {
+                        _nameLower: {
+                            $toLower: {
+                                $ifNull: ['$name', ''],
+                            },
+                        },
+                        _searchTermsLower: {
+                            $map: {
+                                input: {
+                                    $ifNull: ['$searchTerms', []],
+                                },
+                                as: 'term',
+                                in: {
+                                    $toLower: '$$term',
+                                },
+                            },
+                        },
+                        _searchTermLower: {
+                            $toLower: {
+                                $ifNull: ['$searchTerm', ''],
                             },
                         },
                     },
-                    {
-                        searchTerm: {
-                            $elemMatch: {
-                                $regex: this.escapeRegex(normalizedTranslatedTerm),
-                                $options: 'i',
+                },
+                {
+                    $addFields: {
+                        searchRank: {
+                            $switch: {
+                                branches: [
+                                    // exact match in new searchTerms
+                                    {
+                                        case: {
+                                            $anyElementTrue: {
+                                                $map: {
+                                                    input: '$_searchTermsLower',
+                                                    as: 'term',
+                                                    in: {
+                                                        $in: ['$$term', allVariants],
+                                                    },
+                                                },
+                                            },
+                                        },
+                                        then: 100,
+                                    },
+                                    // exact match in old searchTerm fallback
+                                    {
+                                        case: {
+                                            $in: ['$_searchTermLower', allVariants],
+                                        },
+                                        then: 95,
+                                    },
+                                    // exact name match
+                                    {
+                                        case: {
+                                            $in: ['$_nameLower', allVariants],
+                                        },
+                                        then: 90,
+                                    },
+                                    // searchTerms starts with query
+                                    {
+                                        case: {
+                                            $anyElementTrue: {
+                                                $map: {
+                                                    input: '$_searchTermsLower',
+                                                    as: 'term',
+                                                    in: {
+                                                        $or: escapedVariants.map(term => ({
+                                                            $regexMatch: {
+                                                                input: '$$term',
+                                                                regex: `^${term}`,
+                                                                options: 'i',
+                                                            },
+                                                        })),
+                                                    },
+                                                },
+                                            },
+                                        },
+                                        then: 80,
+                                    },
+                                    // old searchTerm starts with query
+                                    {
+                                        case: {
+                                            $or: escapedVariants.map(term => ({
+                                                $regexMatch: {
+                                                    input: '$_searchTermLower',
+                                                    regex: `^${term}`,
+                                                    options: 'i',
+                                                },
+                                            })),
+                                        },
+                                        then: 75,
+                                    },
+                                    // name starts with query
+                                    {
+                                        case: {
+                                            $or: escapedVariants.map(term => ({
+                                                $regexMatch: {
+                                                    input: '$_nameLower',
+                                                    regex: `^${term}`,
+                                                    options: 'i',
+                                                },
+                                            })),
+                                        },
+                                        then: 70,
+                                    },
+                                    // searchTerms contains query
+                                    {
+                                        case: {
+                                            $anyElementTrue: {
+                                                $map: {
+                                                    input: '$_searchTermsLower',
+                                                    as: 'term',
+                                                    in: {
+                                                        $or: escapedVariants.map(term => ({
+                                                            $regexMatch: {
+                                                                input: '$$term',
+                                                                regex: term,
+                                                                options: 'i',
+                                                            },
+                                                        })),
+                                                    },
+                                                },
+                                            },
+                                        },
+                                        then: 60,
+                                    },
+                                    // old searchTerm contains query
+                                    {
+                                        case: {
+                                            $or: escapedVariants.map(term => ({
+                                                $regexMatch: {
+                                                    input: '$_searchTermLower',
+                                                    regex: term,
+                                                    options: 'i',
+                                                },
+                                            })),
+                                        },
+                                        then: 55,
+                                    },
+                                    // name contains query
+                                    {
+                                        case: {
+                                            $or: escapedVariants.map(term => ({
+                                                $regexMatch: {
+                                                    input: '$_nameLower',
+                                                    regex: term,
+                                                    options: 'i',
+                                                },
+                                            })),
+                                        },
+                                        then: 50,
+                                    },
+                                ],
+                                default: 0,
                             },
                         },
                     },
-                    { name: { $regex: this.escapeRegex(normalizedTerm), $options: 'i' } },
-                    {
-                        name: {
-                            $regex: this.escapeRegex(normalizedTranslatedTerm),
-                            $options: 'i',
-                        },
+                },
+                {
+                    $sort: {
+                        searchRank: -1,
+                        name: 1,
+                        _id: 1,
                     },
-                ],
-            });
+                },
+                {
+                    $project: {
+                        _nameLower: 0,
+                        _searchTermsLower: 0,
+                        _searchTermLower: 0,
+                        searchRank: 0,
+                    },
+                },
+            ]);
             const meals = (await meal_service_1.MealService.query({
-                $or: [
-                    { name: { $regex: normalizedTerm, $options: 'i' } },
-                    { name: { $regex: normalizedTranslatedTerm, $options: 'i' } },
-                ],
+                $or: escapedVariants.map(term => ({
+                    name: {
+                        $regex: term,
+                        $options: 'i',
+                    },
+                })),
             }));
-            return [...meals, ...items];
+            return [...items, ...meals];
         }
         catch (err) {
             logger_service_1.logger.error(`Failed to get items by search term ${searchTerm}`, err);
             throw err;
         }
+    }
+    static getSearchVariants(term) {
+        const normalized = this.normalizeSearchTerm(term).toLowerCase().trim();
+        const variants = new Set();
+        variants.add(normalized);
+        const words = normalized.split(/\s+/);
+        const lastWord = words[words.length - 1];
+        if (!lastWord)
+            return [...variants];
+        // eggs -> egg
+        if (lastWord.endsWith('s') && lastWord.length > 3) {
+            variants.add([...words.slice(0, -1), lastWord.slice(0, -1)].join(' '));
+        }
+        // egg -> eggs
+        if (!lastWord.endsWith('s')) {
+            variants.add([...words.slice(0, -1), `${lastWord}s`].join(' '));
+        }
+        // tomatoes -> tomato
+        if (lastWord.endsWith('es') && lastWord.length > 4) {
+            variants.add([...words.slice(0, -1), lastWord.slice(0, -2)].join(' '));
+        }
+        // berry -> berries
+        if (lastWord.endsWith('y') && lastWord.length > 3) {
+            variants.add([...words.slice(0, -1), `${lastWord.slice(0, -1)}ies`].join(' '));
+        }
+        // berries -> berry
+        if (lastWord.endsWith('ies') && lastWord.length > 4) {
+            variants.add([...words.slice(0, -1), `${lastWord.slice(0, -3)}y`].join(' '));
+        }
+        return [...variants].filter(Boolean);
     }
     /**
      * Check if a search term has cached results
