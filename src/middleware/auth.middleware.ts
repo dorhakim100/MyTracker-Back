@@ -33,7 +33,6 @@ export const protect = async (
 
   const loginToken = cookieToken || headerToken
 
-
   if (
     // req.headers.authorization &&
     // req.headers.authorization.startsWith('Bearer')
@@ -94,26 +93,9 @@ export function requireAuth(
 
   if (!loggedinUser) return res.status(401).send('Not Authenticated')
 
-  const { id } = req.body
-  const bodyUserId = req.body.userId as string | undefined
-  const queryUserId =
-    typeof req.query.userId === 'string' ? req.query.userId : undefined
-  const requestedUserId = bodyUserId ?? queryUserId
+  const { id, userId } = req.body
 
-  const tokenUserId =
-    loggedinUser._id?.toString() ?? loggedinUser.id?.toString()
-
-  if (id !== undefined && id !== loggedinUser.id) {
-    return res.status(401).send('Not Authenticated')
-  }
-
-  if (
-    requestedUserId &&
-    tokenUserId &&
-    requestedUserId !== tokenUserId
-  ) {
-    return res.status(401).send('Not Authenticated')
-  }
+  if (id !== loggedinUser.id) return res.status(401).send('Not Authenticated')
 
   // if (config.isGuestMode && !loggedinUser) {
   //   req.loggedinUser = { _id: '', fullname: 'Guest' }
