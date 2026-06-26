@@ -21,6 +21,8 @@ export interface IUser extends mongoose.Document {
   trainersIds?: string[]
   isAddedByTrainer: boolean
   isFixedMenu: boolean
+  googleId?: string
+  googleRefreshToken?: string
 }
 
 interface UserDetails {
@@ -107,6 +109,15 @@ const userSchema = new mongoose.Schema(
     isFixedMenu: {
       type: Boolean,
       default: false,
+    },
+    googleId: {
+      type: String,
+      sparse: true,
+      unique: true,
+    },
+    googleRefreshToken: {
+      type: String,
+      select: false,
     },
   },
   {

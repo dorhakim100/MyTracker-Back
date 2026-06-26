@@ -7,4 +7,7 @@ const router = (0, express_1.Router)();
 router.post('/login', auth_controller_1.AuthController.login);
 router.post('/signup', auth_controller_1.AuthController.signup);
 router.post('/logout', auth_controller_1.AuthController.logout);
+router.get('/google', auth_controller_1.AuthController.googleAuth);
+router.get('/google/callback', auth_controller_1.AuthController.googleCallback);
+router.post('/google/complete', auth_controller_1.AuthController.completeGoogleAuth);
 exports.authRoutes = router;

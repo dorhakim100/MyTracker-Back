@@ -77,6 +77,15 @@ const userSchema = new mongoose_1.default.Schema({
         type: Boolean,
         default: false,
     },
+    googleId: {
+        type: String,
+        sparse: true,
+        unique: true,
+    },
+    googleRefreshToken: {
+        type: String,
+        select: false,
+    },
 }, {
     timestamps: true,
     versionKey: false,
