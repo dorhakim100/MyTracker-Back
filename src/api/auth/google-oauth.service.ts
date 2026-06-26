@@ -51,7 +51,12 @@ function getOAuthClient(): OAuth2Client {
 }
 
 function getFrontendUrl(): string {
-  return process.env.FRONTEND_URL || 'http://localhost:5173'
+  if (process.env.NODE_ENV === 'production') {
+    return (
+      process.env.FRONTEND_URL_PROD || 'https://mytracker-j6fc.onrender.com'
+    )
+  }
+  return process.env.FRONTEND_URL_DEV || 'http://localhost:5173'
 }
 
 function encodeState(payload: OAuthStatePayload): string {
