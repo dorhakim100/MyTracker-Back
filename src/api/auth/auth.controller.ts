@@ -175,4 +175,44 @@ export class AuthController {
       res.status(400).send({ err: 'Failed to complete Google login' })
     }
   }
+
+  static async exchangeNativeGoogleAuth(req: Request, res: Response) {
+    const { serverAuthCode, idToken, intent, userId } = req.body
+
+    if (
+      !serverAuthCode ||
+      typeof serverAuthCode !== 'string' ||
+      !idToken ||
+      typeof idToken !== 'string'
+    ) {
+      return res.status(400).send({ err: 'Missing Google native auth payload' })
+    }
+
+    const resolvedIntent = intent === 'connect' ? 'connect' : 'login'
+
+    if (resolvedIntent === 'connect' && !userId) {
+      return res.status(400).send({ err: 'Missing user for Google connect flow' })
+    }
+
+    try {
+      const result = await GoogleOAuthService.exchangeNativeAuth({
+        serverAuthCode,
+        idToken,
+        intent: resolvedIntent,
+        userId,
+      })
+
+      if (result.loginToken) {
+        res.cookie('loginToken', result.loginToken, {
+          sameSite: 'none',
+          secure: true,
+        })
+      }
+
+      res.json(result)
+    } catch (err: any) {
+      logger.error('Failed to complete native Google auth ' + err)
+      res.status(400).send({ err: 'Failed to complete native Google auth' })
+    }
+  }
 }

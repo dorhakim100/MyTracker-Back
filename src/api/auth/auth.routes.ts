@@ -11,5 +11,6 @@ router.get('/google', AuthController.googleAuth)
 router.post('/google/connect-url', AuthController.getGoogleConnectUrl)
 router.get('/google/callback', AuthController.googleCallback)
 router.post('/google/complete', AuthController.completeGoogleAuth)
+router.post('/google/native-exchange', AuthController.exchangeNativeGoogleAuth)
 
 export const authRoutes = router

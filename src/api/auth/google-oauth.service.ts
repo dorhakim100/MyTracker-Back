@@ -200,6 +200,58 @@ export class GoogleOAuthService {
     return redirectUrl.toString()
   }
 
+  static async exchangeNativeAuth(params: {
+    serverAuthCode: string
+    idToken: string
+    intent: OAuthIntent
+    userId?: string
+  }): Promise<{ user?: IUser; loginToken?: string; connected?: boolean }> {
+    const client = getOAuthClient()
+
+    const ticket = await client.verifyIdToken({
+      idToken: params.idToken,
+      audience: process.env.GOOGLE_OAUTH_CLIENT_ID,
+    })
+
+    const profile = buildGoogleProfile(ticket.getPayload() || {})
+
+    let encryptedRefreshToken: string | undefined
+    try {
+      const { tokens } = await client.getToken({
+        code: params.serverAuthCode,
+        redirect_uri: '',
+      })
+      encryptedRefreshToken = tokens.refresh_token
+        ? encryptToken(tokens.refresh_token)
+        : undefined
+    } catch (err) {
+      logger.error('Failed to exchange Google server auth code ' + err)
+      throw new Error('Failed to exchange Google authorization code')
+    }
+
+    if (params.intent === 'connect') {
+      if (!params.userId) {
+        throw new Error('Missing user for Google Health connect flow')
+      }
+
+      await GoogleOAuthService.linkGoogleHealthToUser(
+        params.userId,
+        profile,
+        encryptedRefreshToken
+      )
+
+      return { connected: true }
+    }
+
+    const user = await GoogleOAuthService.linkOrCreateUser(
+      profile,
+      encryptedRefreshToken
+    )
+    const loginToken = GoogleOAuthService.getLoginTokenForUser(user)
+
+    return { user, loginToken }
+  }
+
   static async exchangePendingCode(code: string) {
     cleanupExpiredPendingCodes()
     const pending = pendingAuthCodes.get(code)
