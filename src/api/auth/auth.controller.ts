@@ -1,9 +1,11 @@
 import { Request, Response } from 'express'
+import jwt from 'jsonwebtoken'
 import { AuthService } from './auth.service'
 import { GoogleOAuthService } from './google-oauth.service'
 import { logger } from '../../services/logger.service'
 import { DayService } from '../day/day.service'
 import { IDay } from '../day/day.model'
+import type { AuthRequest } from '../../middleware/auth.middleware'
 
 export class AuthController {
   static async login(req: Request, res: Response) {
@@ -57,7 +59,36 @@ export class AuthController {
       const intent = req.query.intent === 'connect' ? 'connect' : 'login'
       const returnTo =
         typeof req.query.returnTo === 'string' ? req.query.returnTo : undefined
-      const url = GoogleOAuthService.getAuthorizationUrl(intent, returnTo)
+
+      let userId: string | undefined
+      if (intent === 'connect') {
+        const cookieToken = req.cookies.loginToken
+        const authHeader = req.headers.authorization
+        const headerToken = authHeader?.startsWith('Bearer ')
+          ? authHeader.slice(7)
+          : null
+        const loginToken = cookieToken || headerToken
+
+        if (!loginToken) {
+          return res.status(401).send({ err: 'Not authenticated' })
+        }
+
+        const decoded = jwt.verify(
+          loginToken,
+          process.env.JWT_SECRET as string
+        ) as { _id?: string }
+        userId = decoded._id
+
+        if (!userId) {
+          return res.status(401).send({ err: 'Not authenticated' })
+        }
+      }
+
+      const url = GoogleOAuthService.getAuthorizationUrl(
+        intent,
+        returnTo,
+        userId
+      )
       res.redirect(url)
     } catch (err: any) {
       logger.error('Failed to start Google OAuth ' + err)
@@ -72,6 +103,30 @@ export class AuthController {
       )
     }
     return process.env.FRONTEND_URL_DEV || 'http://localhost:5173'
+  }
+
+  static getGoogleConnectUrl(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.body.userId as string
+      logger.info('userId', userId)
+      logger.info('req', req.body)
+      if (!userId) {
+        return
+      }
+
+      const returnTo =
+        typeof req.body?.returnTo === 'string' ? req.body.returnTo : undefined
+      const url = GoogleOAuthService.getAuthorizationUrl(
+        'connect',
+        returnTo,
+        userId
+      )
+      logger.info('url', url)
+      res.json({ url })
+    } catch (err: any) {
+      logger.error('Failed to create Google connect URL ' + err)
+      res.status(500).send({ err: 'Failed to create Google connect URL' })
+    }
   }
 
   static async googleCallback(req: Request, res: Response) {

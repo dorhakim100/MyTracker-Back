@@ -17,6 +17,8 @@ interface AuthRequest extends Request {
   user?: JWTPayload
 }
 
+export type { AuthRequest, JWTPayload }
+
 export const protect = async (
   req: AuthRequest,
   res: Response,

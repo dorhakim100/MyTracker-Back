@@ -86,6 +86,9 @@ const userSchema = new mongoose_1.default.Schema({
         type: String,
         select: false,
     },
+    googleHealthConnectedAt: {
+        type: Date,
+    },
 }, {
     timestamps: true,
     versionKey: false,

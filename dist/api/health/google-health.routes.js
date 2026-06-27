@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.googleHealthRoutes = void 0;
+const express_1 = require("express");
+const auth_middleware_1 = require("../../middleware/auth.middleware");
+const google_health_controller_1 = require("./google-health.controller");
+const router = (0, express_1.Router)();
+router.get('/status', auth_middleware_1.protect, google_health_controller_1.GoogleHealthController.getStatus);
+router.get('/today', auth_middleware_1.protect, google_health_controller_1.GoogleHealthController.getTodayActivitySummary);
+exports.googleHealthRoutes = router;

@@ -1,6 +1,10 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = void 0;
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const auth_service_1 = require("./auth.service");
 const google_oauth_service_1 = require("./google-oauth.service");
 const logger_service_1 = require("../../services/logger.service");
@@ -51,7 +55,24 @@ class AuthController {
         try {
             const intent = req.query.intent === 'connect' ? 'connect' : 'login';
             const returnTo = typeof req.query.returnTo === 'string' ? req.query.returnTo : undefined;
-            const url = google_oauth_service_1.GoogleOAuthService.getAuthorizationUrl(intent, returnTo);
+            let userId;
+            if (intent === 'connect') {
+                const cookieToken = req.cookies.loginToken;
+                const authHeader = req.headers.authorization;
+                const headerToken = authHeader?.startsWith('Bearer ')
+                    ? authHeader.slice(7)
+                    : null;
+                const loginToken = cookieToken || headerToken;
+                if (!loginToken) {
+                    return res.status(401).send({ err: 'Not authenticated' });
+                }
+                const decoded = jsonwebtoken_1.default.verify(loginToken, process.env.JWT_SECRET);
+                userId = decoded._id;
+                if (!userId) {
+                    return res.status(401).send({ err: 'Not authenticated' });
+                }
+            }
+            const url = google_oauth_service_1.GoogleOAuthService.getAuthorizationUrl(intent, returnTo, userId);
             res.redirect(url);
         }
         catch (err) {
@@ -59,11 +80,33 @@ class AuthController {
             res.status(500).send({ err: 'Failed to start Google OAuth' });
         }
     }
+    static getFrontendUrl() {
+        if (process.env.NODE_ENV === 'production') {
+            return (process.env.FRONTEND_URL_PROD || 'https://mytracker-j6fc.onrender.com');
+        }
+        return process.env.FRONTEND_URL_DEV || 'http://localhost:5173';
+    }
+    static getGoogleConnectUrl(req, res) {
+        try {
+            const userId = req.user?._id;
+            if (!userId) {
+                return res.status(401).send({ err: 'Not authenticated' });
+            }
+            const returnTo = typeof req.body?.returnTo === 'string' ? req.body.returnTo : undefined;
+            const url = google_oauth_service_1.GoogleOAuthService.getAuthorizationUrl('connect', returnTo, userId);
+            res.json({ url });
+        }
+        catch (err) {
+            logger_service_1.logger.error('Failed to create Google connect URL ' + err);
+            res.status(500).send({ err: 'Failed to create Google connect URL' });
+        }
+    }
     static async googleCallback(req, res) {
         const { code, state, error } = req.query;
+        const frontendUrl = AuthController.getFrontendUrl();
         if (error) {
             logger_service_1.logger.error('Google OAuth denied ' + error);
-            const redirectUrl = new URL('/auth/google/callback', process.env.FRONTEND_URL || 'http://localhost:5173');
+            const redirectUrl = new URL('/auth/google/callback', frontendUrl);
             redirectUrl.searchParams.set('error', String(error));
             return res.redirect(redirectUrl.toString());
         }
@@ -76,7 +119,7 @@ class AuthController {
         }
         catch (err) {
             logger_service_1.logger.error('Failed to complete Google OAuth ' + err);
-            const redirectUrl = new URL('/auth/google/callback', process.env.FRONTEND_URL || 'http://localhost:5173');
+            const redirectUrl = new URL('/auth/google/callback', frontendUrl);
             redirectUrl.searchParams.set('error', 'oauth_failed');
             res.redirect(redirectUrl.toString());
         }

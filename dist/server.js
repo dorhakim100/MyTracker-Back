@@ -30,6 +30,7 @@ const item_routes_1 = require("./api/item/item.routes");
 const exercise_routes_1 = require("./api/exercise/exercise.routes");
 const gpt_routes_1 = require("./api/chatGPT/gpt.routes");
 const body_fat_routes_1 = require("./api/body-fat/body-fat.routes");
+const google_health_routes_1 = require("./api/health/google-health.routes");
 const socket_service_1 = require("./services/socket/socket.service");
 const setupAls_middleware_1 = require("./middleware/setupAls.middleware");
 const logger_service_1 = require("./services/logger.service");
@@ -116,6 +117,7 @@ app.use('/api/item', item_routes_1.itemRoutes);
 app.use('/api/exercise', exercise_routes_1.exerciseRoutes);
 app.use('/api/chatgpt', gpt_routes_1.chatGPTRoutes);
 app.use('/api/body-fat', body_fat_routes_1.bodyFatRoutes);
+app.use('/api/health/google', google_health_routes_1.googleHealthRoutes);
 app.use('/api/translate', translate_routes_1.translateRoutes);
 // Setup Socket.IO
 (0, socket_service_1.setupSocketAPI)(server);

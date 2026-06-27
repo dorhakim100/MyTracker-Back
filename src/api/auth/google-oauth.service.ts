@@ -10,14 +10,20 @@ import {
   resolveGoogleLinkOrCreateAction,
 } from './google-oauth.logic'
 import { AuthService } from './auth.service'
+import { decryptToken } from '../../services/token-crypto.service'
 
-const OAUTH_SCOPES = [
+const BASE_OAUTH_SCOPES = [
   'openid',
   'email',
   'profile',
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/userinfo.profile',
 ]
+
+const GOOGLE_HEALTH_READ_SCOPE =
+  'https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly'
+
+const OAUTH_SCOPES = [...BASE_OAUTH_SCOPES, GOOGLE_HEALTH_READ_SCOPE]
 
 type OAuthIntent = 'login' | 'connect'
 
@@ -31,6 +37,7 @@ type OAuthStatePayload = {
   intent: OAuthIntent
   nonce: string
   returnTo?: string
+  userId?: string
 }
 
 const pendingAuthCodes = new Map<string, PendingAuthPayload>()
@@ -116,12 +123,17 @@ function buildGoogleProfile(payload: {
 }
 
 export class GoogleOAuthService {
-  static getAuthorizationUrl(intent: OAuthIntent, returnTo?: string): string {
+  static getAuthorizationUrl(
+    intent: OAuthIntent,
+    returnTo?: string,
+    userId?: string
+  ): string {
     const client = getOAuthClient()
     const state = encodeState({
       intent,
       nonce: crypto.randomBytes(16).toString('hex'),
       returnTo,
+      userId,
     })
 
     return client.generateAuthUrl({
@@ -152,7 +164,24 @@ export class GoogleOAuthService {
       : undefined
 
     if (statePayload.intent === 'connect') {
-      throw new Error('Google Health connect flow is not available yet')
+      if (!statePayload.userId) {
+        throw new Error('Missing user for Google Health connect flow')
+      }
+
+      await GoogleOAuthService.linkGoogleHealthToUser(
+        statePayload.userId,
+        profile,
+        refreshToken
+      )
+
+      const redirectUrl = new URL('/auth/google/callback', getFrontendUrl())
+      redirectUrl.searchParams.set('connected', '1')
+
+      if (statePayload.returnTo) {
+        redirectUrl.searchParams.set('returnTo', statePayload.returnTo)
+      }
+
+      return redirectUrl.toString()
     }
 
     const user = await GoogleOAuthService.linkOrCreateUser(
@@ -180,7 +209,12 @@ export class GoogleOAuthService {
 
     pendingAuthCodes.delete(code)
     const user = await UserService.getById(pending.userId)
-    delete (user as any).password
+    if (user && user.password) {
+      delete (user as any).password
+    }
+
+    logger.info('user', user)
+    logger.info('pending', pending)
 
     return {
       user,
@@ -226,7 +260,10 @@ export class GoogleOAuthService {
           {
             googleId: profile.googleId,
             ...(encryptedRefreshToken
-              ? { googleRefreshToken: encryptedRefreshToken }
+              ? {
+                  googleRefreshToken: encryptedRefreshToken,
+                  googleHealthConnectedAt: new Date(),
+                }
               : {}),
             'details.fullname':
               profile.fullname ||
@@ -243,6 +280,9 @@ export class GoogleOAuthService {
           email: profile.email,
           googleId: profile.googleId,
           googleRefreshToken: encryptedRefreshToken,
+          googleHealthConnectedAt: encryptedRefreshToken
+            ? new Date()
+            : undefined,
           details: {
             fullname: profile.fullname,
             imgUrl:
@@ -268,6 +308,7 @@ export class GoogleOAuthService {
     if (encryptedRefreshToken && action.type === 'login') {
       await User.findByIdAndUpdate(user._id, {
         googleRefreshToken: encryptedRefreshToken,
+        googleHealthConnectedAt: new Date(),
       })
     }
 
@@ -278,6 +319,62 @@ export class GoogleOAuthService {
 
   static getLoginTokenForUser(user: IUser) {
     return AuthService.getLoginToken(user)
+  }
+
+  static async getAccessTokenForUser(userId: string): Promise<string> {
+    const user = await User.findById(userId).select('+googleRefreshToken')
+    if (!user?.googleRefreshToken) {
+      throw new Error('Google Health not connected')
+    }
+
+    const client = getOAuthClient()
+    client.setCredentials({
+      refresh_token: decryptToken(user.googleRefreshToken),
+    })
+
+    const { credentials } = await client.refreshAccessToken()
+    if (!credentials.access_token) {
+      throw new Error('Failed to refresh Google access token')
+    }
+
+    return credentials.access_token
+  }
+
+  static async linkGoogleHealthToUser(
+    userId: string,
+    profile: GoogleProfile,
+    encryptedRefreshToken?: string
+  ) {
+    const user = await User.findById(userId)
+    if (!user) {
+      throw new Error('User not found')
+    }
+
+    if (user.googleId && user.googleId !== profile.googleId) {
+      throw new Error(
+        'This account is already linked to a different Google account'
+      )
+    }
+
+    const existingByGoogleId = await User.findOne({
+      googleId: profile.googleId,
+      _id: { $ne: userId },
+    })
+
+    if (existingByGoogleId) {
+      throw new Error('This Google account is already linked to another user')
+    }
+
+    await User.findByIdAndUpdate(userId, {
+      googleId: profile.googleId,
+      ...(encryptedRefreshToken
+        ? {
+            googleRefreshToken: encryptedRefreshToken,
+            googleHealthConnectedAt: new Date(),
+          }
+        : {}),
+      ...(profile.picture ? { 'details.imgUrl': profile.picture } : {}),
+    })
   }
 }
 

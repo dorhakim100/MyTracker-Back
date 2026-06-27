@@ -23,6 +23,7 @@ export interface IUser extends mongoose.Document {
   isFixedMenu: boolean
   googleId?: string
   googleRefreshToken?: string
+  googleHealthConnectedAt?: Date
 }
 
 interface UserDetails {
@@ -118,6 +119,9 @@ const userSchema = new mongoose.Schema(
     googleRefreshToken: {
       type: String,
       select: false,
+    },
+    googleHealthConnectedAt: {
+      type: Date,
     },
   },
   {

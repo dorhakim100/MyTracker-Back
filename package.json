@@ -9,7 +9,8 @@
     "build": "tsc",
     "lint": "eslint . --ext .ts",
     "test": "jest",
-    "test:google-oauth": "ts-node src/api/auth/google-oauth.logic.test.ts"
+    "test:google-oauth": "ts-node src/api/auth/google-oauth.logic.test.ts",
+    "test:google-health": "ts-node src/api/health/google-health.normalize.test.ts"
   },
   "dependencies": {
     "@google-cloud/translate": "^9.2.0",
