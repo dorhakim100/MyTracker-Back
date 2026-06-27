@@ -12,7 +12,6 @@ export class GoogleHealthController {
       }
 
       const status = await GoogleHealthService.getStatus(userId)
-
       res.json(status)
     } catch (err) {
       logger.error('Failed to get Google Health status', err)

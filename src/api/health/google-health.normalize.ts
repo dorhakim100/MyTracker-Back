@@ -23,7 +23,6 @@ export function extractSteps(
 export function extractFloors(
   rollupDataPoints?: DailyRollUpDataPoint[]
 ): number {
-  console.log('extractFloors', rollupDataPoints)
   return extractRollUpValue(rollupDataPoints, (point) => point.floors?.countSum)
 }
 
