@@ -33,6 +33,7 @@ interface UserDetails {
   height: number
   gender: string
   activity: string
+  dailyStepsGoal?: number
 }
 
 // const defaultGoal = UserService.getDefaultGoal()
@@ -61,6 +62,7 @@ const userSchema = new mongoose.Schema(
         height: 170,
         gender: 'male',
         activity: 'sedentary',
+        dailyStepsGoal: 10000,
       },
     },
     favoriteItems: {

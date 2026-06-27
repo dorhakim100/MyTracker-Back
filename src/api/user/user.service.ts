@@ -1,6 +1,12 @@
 import mongoose from 'mongoose'
 
 import { User, IUser } from './user.model'
+import {
+  applyDailyStepsGoalUpdate,
+  DEFAULT_DAILY_STEPS_GOAL,
+  normalizeUserDetails,
+  type UserDetailsFields,
+} from './user-details.util'
 import { logger } from '../../services/logger.service'
 import { Goal } from '@/types/Goal/Goal'
 import { GoalService } from '../goal/goal.service'
@@ -295,7 +301,14 @@ export class UserService {
         },
       ])
 
-      return user || null
+      if (!user) {
+        return null
+      }
+
+      return {
+        ...user,
+        details: normalizeUserDetails(user.details as UserDetailsFields),
+      }
     } catch (err) {
       logger.error(`Failed to get user ${userId}`, err)
       throw err
@@ -332,7 +345,19 @@ export class UserService {
       delete userToUpdate.goals
       delete userToUpdate.currGoal
 
-      const user = await User.findByIdAndUpdate(userId, userToUpdate, {
+      if (userToUpdate.details) {
+        const existingUser = await User.findById(userId).select('details')
+        if (!existingUser) {
+          throw new Error('User not found')
+        }
+
+        userToUpdate.details = applyDailyStepsGoalUpdate(
+          existingUser.details as UserDetailsFields,
+          userToUpdate.details as Partial<UserDetailsFields>
+        )
+      }
+
+      await User.findByIdAndUpdate(userId, userToUpdate, {
         new: true,
       })
 
@@ -403,6 +428,7 @@ export class UserService {
       height: 170,
       gender: 'male',
       activity: 'sedentary',
+      dailyStepsGoal: DEFAULT_DAILY_STEPS_GOAL,
     }
   }
 }

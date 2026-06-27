@@ -44,7 +44,10 @@ export class UserController {
       res.json(user)
     } catch (err: any) {
       logger.error('Failed to update user', err)
-      res.status(500).send({ err: 'Failed to update user' })
+      const message =
+        err instanceof Error ? err.message : 'Failed to update user'
+      const isValidationError = message.includes('dailyStepsGoal')
+      res.status(isValidationError ? 400 : 500).send({ err: message })
     }
   }
 
