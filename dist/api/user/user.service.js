@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserService = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
 const user_model_1 = require("./user.model");
+const user_details_util_1 = require("./user-details.util");
 const logger_service_1 = require("../../services/logger.service");
 const goal_service_1 = require("../goal/goal.service");
 const log_service_1 = require("../log/log.service");
@@ -287,7 +288,13 @@ class UserService {
                     },
                 },
             ]);
-            return user || null;
+            if (!user) {
+                return null;
+            }
+            return {
+                ...user,
+                details: (0, user_details_util_1.normalizeUserDetails)(user.details),
+            };
         }
         catch (err) {
             logger_service_1.logger.error(`Failed to get user ${userId}`, err);
@@ -322,7 +329,14 @@ class UserService {
         try {
             delete userToUpdate.goals;
             delete userToUpdate.currGoal;
-            const user = await user_model_1.User.findByIdAndUpdate(userId, userToUpdate, {
+            if (userToUpdate.details) {
+                const existingUser = await user_model_1.User.findById(userId).select('details');
+                if (!existingUser) {
+                    throw new Error('User not found');
+                }
+                userToUpdate.details = (0, user_details_util_1.applyDailyStepsGoalUpdate)(existingUser.details, userToUpdate.details);
+            }
+            await user_model_1.User.findByIdAndUpdate(userId, userToUpdate, {
                 new: true,
             });
             const aggregatedUser = await UserService.getById(userId);
@@ -383,6 +397,7 @@ class UserService {
             height: 170,
             gender: 'male',
             activity: 'sedentary',
+            dailyStepsGoal: user_details_util_1.DEFAULT_DAILY_STEPS_GOAL,
         };
     }
 }

@@ -12,5 +12,5 @@ export function startCron(job: () => Promise<void>,cronExpression: string = CRON
     timezone: cronTimezone,
   })
 
-  logger.info(`Cron: scheduled daily at 04:00 ${cronTimezone} (${cronExpression})`)
+  logger.info(`Cron: scheduled (${cronExpression}) ${cronTimezone}`)
 }

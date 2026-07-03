@@ -36,6 +36,9 @@ function extractActiveCalories(activeEnergyRollup, totalCaloriesRollup) {
         point.totalCalories?.kilocaloriesSum);
 }
 function roundValue(value, digits = 0) {
+    if (typeof value === 'string') {
+        value = Number(value);
+    }
     const factor = 10 ** digits;
     return Math.round(value * factor) / factor;
 }

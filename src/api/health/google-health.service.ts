@@ -47,6 +47,12 @@ export class GoogleHealthService {
       return { status: 'not_connected' }
     }
 
+    return GoogleHealthService.fetchTodayActivitySummaryFromGoogle(userId)
+  }
+
+  static async fetchTodayActivitySummaryFromGoogle(
+    userId: string
+  ): Promise<TodayActivitySummaryResponse> {
     try {
       const accessToken = await GoogleOAuthService.getAccessTokenForUser(userId)
       const window = getLocalTodayWindow()
@@ -57,7 +63,7 @@ export class GoogleHealthService {
         stepsRollup,
         distanceRollup,
         floorsRollup,
-        activeEnergyRollup,
+        _activeEnergyRollup,
         totalCaloriesRollup,
       ] = await Promise.all([
         GoogleHealthService.fetchDailyRollUp(accessToken, 'steps', start, end),

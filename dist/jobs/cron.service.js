@@ -14,5 +14,5 @@ function startCron(job, cronExpression = CRON_EXPRESSION, cronTimezone = CRON_TI
     }, {
         timezone: cronTimezone,
     });
-    logger_service_1.logger.info(`Cron: scheduled daily at 04:00 ${cronTimezone} (${cronExpression})`);
+    logger_service_1.logger.info(`Cron: scheduled (${cronExpression}) ${cronTimezone}`);
 }

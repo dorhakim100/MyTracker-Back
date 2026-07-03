@@ -33,6 +33,7 @@ import { setupSocketAPI } from './services/socket/socket.service'
 import { setupAsyncLocalStorage } from './middleware/setupAls.middleware'
 import { logger } from './services/logger.service'
 import { startBodyFatCleanupCron } from './jobs/body-fat-cleanup.cron'
+import { startGoogleHealthSnapshotCron } from './jobs/google-health-snapshot.cron'
 
 const app = express()
 const server = http.createServer(app)
@@ -156,6 +157,7 @@ const port = process.env.PORT || 3030
 
 connectDB().then(() => {
   startBodyFatCleanupCron()
+  startGoogleHealthSnapshotCron()
 
   server.listen(port, () => {
     logger.info('Server is running on port: ' + port)

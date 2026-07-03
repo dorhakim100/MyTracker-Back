@@ -10,6 +10,7 @@ const google_auth_library_1 = require("google-auth-library");
 const user_model_1 = require("../user/user.model");
 const user_service_1 = require("../user/user.service");
 const day_service_1 = require("../day/day.service");
+const logger_service_1 = require("../../services/logger.service");
 const token_crypto_service_1 = require("../../services/token-crypto.service");
 const google_oauth_logic_1 = require("./google-oauth.logic");
 const auth_service_1 = require("./auth.service");
@@ -138,6 +139,38 @@ class GoogleOAuthService {
         }
         return redirectUrl.toString();
     }
+    static async exchangeNativeAuth(params) {
+        const client = getOAuthClient();
+        const ticket = await client.verifyIdToken({
+            idToken: params.idToken,
+            audience: process.env.GOOGLE_OAUTH_CLIENT_ID,
+        });
+        const profile = buildGoogleProfile(ticket.getPayload() || {});
+        let encryptedRefreshToken;
+        try {
+            const { tokens } = await client.getToken({
+                code: params.serverAuthCode,
+                redirect_uri: '',
+            });
+            encryptedRefreshToken = tokens.refresh_token
+                ? (0, token_crypto_service_1.encryptToken)(tokens.refresh_token)
+                : undefined;
+        }
+        catch (err) {
+            logger_service_1.logger.error('Failed to exchange Google server auth code ' + err);
+            throw new Error('Failed to exchange Google authorization code');
+        }
+        if (params.intent === 'connect') {
+            if (!params.userId) {
+                throw new Error('Missing user for Google Health connect flow');
+            }
+            await GoogleOAuthService.linkGoogleHealthToUser(params.userId, profile, encryptedRefreshToken);
+            return { connected: true };
+        }
+        const user = await GoogleOAuthService.linkOrCreateUser(profile, encryptedRefreshToken);
+        const loginToken = GoogleOAuthService.getLoginTokenForUser(user);
+        return { user, loginToken };
+    }
     static async exchangePendingCode(code) {
         cleanupExpiredPendingCodes();
         const pending = pendingAuthCodes.get(code);
@@ -146,7 +179,11 @@ class GoogleOAuthService {
         }
         pendingAuthCodes.delete(code);
         const user = await user_service_1.UserService.getById(pending.userId);
-        delete user.password;
+        if (user && user.password) {
+            delete user.password;
+        }
+        logger_service_1.logger.info('user', user);
+        logger_service_1.logger.info('pending', pending);
         return {
             user,
             loginToken: pending.loginToken,
@@ -195,7 +232,9 @@ class GoogleOAuthService {
                     email: profile.email,
                     googleId: profile.googleId,
                     googleRefreshToken: encryptedRefreshToken,
-                    googleHealthConnectedAt: encryptedRefreshToken ? new Date() : undefined,
+                    googleHealthConnectedAt: encryptedRefreshToken
+                        ? new Date()
+                        : undefined,
                     details: {
                         fullname: profile.fullname,
                         imgUrl: profile.picture ||
@@ -247,8 +286,7 @@ class GoogleOAuthService {
         if (!user) {
             throw new Error('User not found');
         }
-        if (user.googleId &&
-            user.googleId !== profile.googleId) {
+        if (user.googleId && user.googleId !== profile.googleId) {
             throw new Error('This account is already linked to a different Google account');
         }
         const existingByGoogleId = await user_model_1.User.findOne({

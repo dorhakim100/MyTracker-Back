@@ -27,22 +27,26 @@ class GoogleHealthService {
         if (!status.connected) {
             return { status: 'not_connected' };
         }
+        return GoogleHealthService.fetchTodayActivitySummaryFromGoogle(userId);
+    }
+    static async fetchTodayActivitySummaryFromGoogle(userId) {
         try {
             const accessToken = await google_oauth_service_1.GoogleOAuthService.getAccessTokenForUser(userId);
             const window = getLocalTodayWindow();
             const start = toCivilDateTime(window.start);
             const end = toCivilDateTime(window.endExclusive);
-            const [stepsRollup, distanceRollup, floorsRollup, activeEnergyRollup, totalCaloriesRollup] = await Promise.all([
+            const [stepsRollup, distanceRollup, floorsRollup, _activeEnergyRollup, totalCaloriesRollup,] = await Promise.all([
                 GoogleHealthService.fetchDailyRollUp(accessToken, 'steps', start, end),
                 GoogleHealthService.fetchDailyRollUp(accessToken, 'distance', start, end),
                 GoogleHealthService.fetchDailyRollUp(accessToken, 'floors', start, end),
                 GoogleHealthService.fetchDailyRollUp(accessToken, 'active-energy-burned', start, end),
                 GoogleHealthService.fetchDailyRollUp(accessToken, 'total-calories', start, end),
             ]);
+            const totalCaloris = totalCaloriesRollup.rollupDataPoints?.[0].totalCalories?.kcalSum || 0;
             return {
                 status: 'ok',
                 steps: (0, google_health_normalize_1.roundValue)((0, google_health_normalize_1.extractSteps)(stepsRollup.rollupDataPoints)),
-                activeCaloriesKcal: (0, google_health_normalize_1.roundValue)((0, google_health_normalize_1.extractActiveCalories)(activeEnergyRollup.rollupDataPoints, totalCaloriesRollup.rollupDataPoints)),
+                activeCaloriesKcal: (0, google_health_normalize_1.roundValue)(totalCaloris),
                 distance: (0, google_health_normalize_1.roundValue)((0, google_health_normalize_1.extractDistanceKm)(distanceRollup.rollupDataPoints), 2),
                 flightsClimbed: (0, google_health_normalize_1.roundValue)((0, google_health_normalize_1.extractFloors)(floorsRollup.rollupDataPoints)),
                 window: {
@@ -55,7 +59,9 @@ class GoogleHealthService {
             logger_service_1.logger.error('Failed to fetch Google Health activity summary', err);
             return {
                 status: 'error',
-                message: err instanceof Error ? err.message : 'Failed to fetch Google Health data',
+                message: err instanceof Error
+                    ? err.message
+                    : 'Failed to fetch Google Health data',
             };
         }
     }

@@ -20,6 +20,10 @@ const exerciseSchema = new mongoose_1.default.Schema({
         type: String,
         required: true,
     },
+    gifUrl: {
+        type: String,
+        required: false,
+    },
     equipment: {
         type: [String],
         required: true,

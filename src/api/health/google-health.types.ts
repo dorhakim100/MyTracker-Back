@@ -48,3 +48,13 @@ export type GoogleHealthStatusResponse = {
   googleEmail: string | null
   provider: 'google' | null
 }
+
+export type GoogleHealthSnapshotResponse = {
+  status: 'ok'
+  steps: number
+  activeCaloriesKcal: number
+  distance: number
+  flightsClimbed: number
+  window: { startIso: string; endIso: string }
+  updatedAt: string
+}

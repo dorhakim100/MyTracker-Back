@@ -88,12 +88,15 @@ class AuthController {
     }
     static getGoogleConnectUrl(req, res) {
         try {
-            const userId = req.user?._id;
+            const userId = req.body.userId;
+            logger_service_1.logger.info('userId', userId);
+            logger_service_1.logger.info('req', req.body);
             if (!userId) {
-                return res.status(401).send({ err: 'Not authenticated' });
+                return;
             }
             const returnTo = typeof req.body?.returnTo === 'string' ? req.body.returnTo : undefined;
             const url = google_oauth_service_1.GoogleOAuthService.getAuthorizationUrl('connect', returnTo, userId);
+            logger_service_1.logger.info('url', url);
             res.json({ url });
         }
         catch (err) {
@@ -137,6 +140,38 @@ class AuthController {
         catch (err) {
             logger_service_1.logger.error('Failed to complete Google login ' + err);
             res.status(400).send({ err: 'Failed to complete Google login' });
+        }
+    }
+    static async exchangeNativeGoogleAuth(req, res) {
+        const { serverAuthCode, idToken, intent, userId } = req.body;
+        if (!serverAuthCode ||
+            typeof serverAuthCode !== 'string' ||
+            !idToken ||
+            typeof idToken !== 'string') {
+            return res.status(400).send({ err: 'Missing Google native auth payload' });
+        }
+        const resolvedIntent = intent === 'connect' ? 'connect' : 'login';
+        if (resolvedIntent === 'connect' && !userId) {
+            return res.status(400).send({ err: 'Missing user for Google connect flow' });
+        }
+        try {
+            const result = await google_oauth_service_1.GoogleOAuthService.exchangeNativeAuth({
+                serverAuthCode,
+                idToken,
+                intent: resolvedIntent,
+                userId,
+            });
+            if (result.loginToken) {
+                res.cookie('loginToken', result.loginToken, {
+                    sameSite: 'none',
+                    secure: true,
+                });
+            }
+            res.json(result);
+        }
+        catch (err) {
+            logger_service_1.logger.error('Failed to complete native Google auth ' + err);
+            res.status(400).send({ err: 'Failed to complete native Google auth' });
         }
     }
 }

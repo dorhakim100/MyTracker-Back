@@ -35,6 +35,7 @@ const socket_service_1 = require("./services/socket/socket.service");
 const setupAls_middleware_1 = require("./middleware/setupAls.middleware");
 const logger_service_1 = require("./services/logger.service");
 const body_fat_cleanup_cron_1 = require("./jobs/body-fat-cleanup.cron");
+const google_health_snapshot_cron_1 = require("./jobs/google-health-snapshot.cron");
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
 if (process.env.NODE_ENV === 'production') {
@@ -143,6 +144,7 @@ const connectDB = async () => {
 const port = process.env.PORT || 3030;
 connectDB().then(() => {
     (0, body_fat_cleanup_cron_1.startBodyFatCleanupCron)();
+    (0, google_health_snapshot_cron_1.startGoogleHealthSnapshotCron)();
     server.listen(port, () => {
         logger_service_1.logger.info('Server is running on port: ' + port);
     });
