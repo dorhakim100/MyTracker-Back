@@ -1,0 +1,267 @@
+{
+  "generatedAt": "2026-07-03T13:34:59.642Z",
+  "minConfidence": 78,
+  "ascendCatalogSize": 1500,
+  "ossCatalogSize": 0,
+  "summary": {
+    "total": 1452,
+    "updated": 36,
+    "skipped": 1416,
+    "unmatched": 0,
+    "ambiguous": 0
+  },
+  "items": [
+    {
+      "exerciseId": "hxyTtWj",
+      "name": "dumbbell seated lateral raise",
+      "gifUrl": "https://assets.exercisedb.dev/media/NNW9e4H.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "9ZGnq1w",
+      "name": "triceps dip (between benches) - extreme variation",
+      "gifUrl": "https://assets.exercisedb.dev/media/gXQpThE.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "Y4BRNQF",
+      "name": "push-up (on stability ball)",
+      "gifUrl": "https://assets.exercisedb.dev/media/XvoMYJL.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "9tvVVM9",
+      "name": "flexible cable triceps pushdown (v-bar)",
+      "gifUrl": "https://assets.exercisedb.dev/media/hEVUD94.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "tgryw5Y",
+      "name": "push-up (on stability ball)",
+      "gifUrl": "https://assets.exercisedb.dev/media/XvoMYJL.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "P7zSvul",
+      "name": "push up on bosu ball with improved",
+      "gifUrl": "https://assets.exercisedb.dev/media/LwShd3h.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "hrrS0Ed",
+      "name": "dumbbell seated lateral raise v. 2",
+      "gifUrl": "https://assets.exercisedb.dev/media/NNW9e4H.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "aqvSOQE",
+      "name": "cable cross-over revers fly",
+      "gifUrl": "https://assets.exercisedb.dev/media/LXC00jZ.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "cwsAI4G",
+      "name": "dumbbell decline shrug",
+      "gifUrl": "https://assets.exercisedb.dev/media/A4EoZJv.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "QfAKy1G",
+      "name": "dumbbell cuban press",
+      "gifUrl": "https://assets.exercisedb.dev/media/6LoAxVx.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "Rr7S3yg",
+      "name": "dumbbell front raise v. 2",
+      "gifUrl": "https://assets.exercisedb.dev/media/XCHKeeT.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "Xy4jlWA",
+      "name": "dumbbell arnold press",
+      "gifUrl": "https://assets.exercisedb.dev/media/dho7HlN.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "3eGE2JC",
+      "name": "dumbbell front raise",
+      "gifUrl": "https://assets.exercisedb.dev/media/XCHKeeT.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "slDvUAU",
+      "name": "dumbbell hammer curl",
+      "gifUrl": "https://assets.exercisedb.dev/media/8Xmxuy8.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "F1KxjBa",
+      "name": "dumbbell peacher hammer curl",
+      "gifUrl": "https://assets.exercisedb.dev/media/pshTUdC.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "T0yTjgW",
+      "name": "lever chest press",
+      "gifUrl": "https://assets.exercisedb.dev/media/eWOWYZB.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "2kattbR",
+      "name": "ez barbell spider curl",
+      "gifUrl": "https://assets.exercisedb.dev/media/IPuL5eR.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "DOoWcnA",
+      "name": "lever chest press",
+      "gifUrl": "https://assets.exercisedb.dev/media/eWOWYZB.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "Ye5Qxb0",
+      "name": "ez barbell spider curl",
+      "gifUrl": "https://assets.exercisedb.dev/media/IPuL5eR.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "W31mMjd",
+      "name": "barbell side split squat",
+      "gifUrl": "https://assets.exercisedb.dev/media/8oZxuux.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "7R4NIjL",
+      "name": "assisted standing triceps extension (with towel) with horizontal",
+      "gifUrl": "https://assets.exercisedb.dev/media/TbFjw40.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "vocve3e",
+      "name": "gentle style dumbbell one leg fly on exercise ball",
+      "gifUrl": "https://assets.exercisedb.dev/media/8dSpjM3.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "UDlhcO8",
+      "name": "barbell upright row",
+      "gifUrl": "https://assets.exercisedb.dev/media/W3IbcBm.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "eOrFCnx",
+      "name": "dumbbell arnold press v. 2",
+      "gifUrl": "https://assets.exercisedb.dev/media/dho7HlN.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "Lsqrgh4",
+      "name": "smith reverse calf raises",
+      "gifUrl": "https://assets.exercisedb.dev/media/nZZzrAf.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "ywaNfuh",
+      "name": "smith reverse calf raises",
+      "gifUrl": "https://assets.exercisedb.dev/media/nZZzrAf.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "1oE78pm",
+      "name": "core barbell upright row v. 2",
+      "gifUrl": "https://assets.exercisedb.dev/media/W3IbcBm.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "83HoW9X",
+      "name": "barbell upright row v. 2",
+      "gifUrl": "https://assets.exercisedb.dev/media/W3IbcBm.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "2NpxjC1",
+      "name": "dumbbell hammer curl v. 2",
+      "gifUrl": "https://assets.exercisedb.dev/media/8Xmxuy8.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "79AmJsI",
+      "name": "dumbbell hammer curl with traditional",
+      "gifUrl": "https://assets.exercisedb.dev/media/8Xmxuy8.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "fI18Rbc",
+      "name": "barbell upright row v. 3",
+      "gifUrl": "https://assets.exercisedb.dev/media/W3IbcBm.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "dNFYIU1",
+      "name": "lever shoulder press v. 3",
+      "gifUrl": "https://assets.exercisedb.dev/media/fgjCjMr.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "ntjtCfu",
+      "name": "barbell sitted alternate leg raise (female) with intermediate",
+      "gifUrl": "https://assets.exercisedb.dev/media/Rixlsat.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "vqsbmL0",
+      "name": "lever shoulder press v. 2",
+      "gifUrl": "https://assets.exercisedb.dev/media/fgjCjMr.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "BqgCRif",
+      "name": "dumbbell cuban press v. 2",
+      "gifUrl": "https://assets.exercisedb.dev/media/6LoAxVx.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    },
+    {
+      "exerciseId": "qDnGfDb",
+      "name": "barbell revers wrist curl v. 2",
+      "gifUrl": "https://assets.exercisedb.dev/media/sCpVYBc.gif",
+      "gifMatchConfidence": 100,
+      "gifMatchStrategy": "manual"
+    }
+  ]
+}

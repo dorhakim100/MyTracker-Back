@@ -5,6 +5,7 @@ export interface IExercise extends mongoose.Document {
   name: string
   muscleGroups: string[]
   image: string
+  gifUrl?: string
   equipment: string[]
   exerciseId: string
   mainMuscles?: string[]
@@ -29,6 +30,10 @@ const exerciseSchema = new mongoose.Schema(
     image: {
       type: String,
       required: true,
+    },
+    gifUrl: {
+      type: String,
+      required: false,
     },
     equipment: {
       type: [String],
