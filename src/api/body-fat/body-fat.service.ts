@@ -1,7 +1,7 @@
 import { BodyFatEstimate, IBodyFatEstimate } from './body-fat.model'
 import { BodyFatGeminiService } from './gemini/body-fat.gemini'
 import { logger } from '../../services/logger.service'
-import { CloudinaryMediaService } from '@/services/cloudinary/cloudinary.service'
+import { CloudinaryMediaService } from '../../services/cloudinary/cloudinary.service'
 
 export class BodyFatService {
   static async estimate(userId: string, imageUrl: string, weightKg: number) {
