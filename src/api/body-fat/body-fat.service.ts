@@ -1,6 +1,7 @@
 import { BodyFatEstimate, IBodyFatEstimate } from './body-fat.model'
 import { BodyFatGeminiService } from './gemini/body-fat.gemini'
 import { logger } from '../../services/logger.service'
+import { CloudinaryMediaService } from '@/services/cloudinary/cloudinary.service'
 
 export class BodyFatService {
   static async estimate(userId: string, imageUrl: string, weightKg: number) {
@@ -14,8 +15,12 @@ export class BodyFatService {
 
     let geminiResult
     try {
-      geminiResult = await BodyFatGeminiService.estimateFromImageUrl(imageUrl, weightKg)
+      geminiResult = await BodyFatGeminiService.estimateFromImageUrl(
+        imageUrl,
+        weightKg
+      )
     } catch (err) {
+      await CloudinaryMediaService.destroyImagesByDeliveryUrls([imageUrl])
       logger.error('BodyFatGeminiService.estimateFromImageUrl failed', err)
       throw new Error('Failed to analyze image')
     }
@@ -31,7 +36,7 @@ export class BodyFatService {
         createdAt: Date.now(),
       })
 
-      return {...BodyFatService.toResponse(saved), status: 'ok'}
+      return { ...BodyFatService.toResponse(saved), status: 'ok' }
     } catch (err) {
       logger.error('BodyFatService.estimate persist failed', err)
       throw err
