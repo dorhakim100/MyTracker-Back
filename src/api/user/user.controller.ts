@@ -21,7 +21,7 @@ export class UserController {
       const user = await UserService.getById(req.params.id)
       const loginToken = AuthService.getLoginToken(user)
       res.cookie('loginToken', loginToken, { sameSite: 'none', secure: true })
-      res.json(user)
+      res.json({ user, loginToken })
     } catch (err: any) {
       logger.error('Failed to remember user', err)
       res.status(500).send({ err: 'Failed to remember user' })

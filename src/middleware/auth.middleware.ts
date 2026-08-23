@@ -88,10 +88,15 @@ export function requireAuth(
 
   // Verify token
 
-  const loggedinUser = jwt.verify(
-    token,
-    process.env.JWT_SECRET as string
-  ) as JWTPayload
+  let loggedinUser: JWTPayload
+  try {
+    loggedinUser = jwt.verify(
+      token,
+      process.env.JWT_SECRET as string
+    ) as JWTPayload
+  } catch {
+    return res.status(401).send('Not Authenticated')
+  }
 
   if (!loggedinUser) return res.status(401).send('Not Authenticated')
 
