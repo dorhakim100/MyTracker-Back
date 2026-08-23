@@ -36,7 +36,6 @@ class SessionService {
             {
                 $addFields: {
                     workout: { $arrayElemAt: ['$workout', 0] },
-                    userId: '$workout.userId',
                 },
             },
         ];
