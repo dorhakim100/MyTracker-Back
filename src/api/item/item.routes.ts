@@ -21,5 +21,13 @@ router.get('/:id', ItemController.getItem)
 router.post('/', requireAuth, ItemController.addItem)
 router.put('/:id', requireAuth, ItemController.updateItem)
 router.delete('/:id', requireAuth, ItemController.deleteItem)
+router.post('/popularity', ItemController.bumpPopularity)
+
+router.get('/admin/list', (req, res) => ItemController.playgroundList(req, res))
+router.post('/admin/save', (req, res) => ItemController.playgroundSave(req, res))
+router.delete('/admin/:id', (req, res) =>
+  ItemController.playgroundDelete(req, res)
+)
+router.post('/admin/apply', (req, res) => ItemController.playgroundApply(req, res))
 
 export const itemRoutes = router

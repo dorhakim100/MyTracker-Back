@@ -229,4 +229,98 @@ export class ItemController {
       res.status(500).send({ err: 'Failed to get image native' })
     }
   }
+
+  static async bumpPopularity(req: Request, res: Response) {
+    try {
+      const { searchId } = req.body as { searchId?: string }
+      if (!searchId) {
+        return res.status(400).send({ err: 'SearchId is required' })
+      }
+      const item = await ItemService.bumpPopularity(searchId)
+      res.json(item)
+    } catch (err: any) {
+      logger.error('Failed to bump popularity', err)
+      res.status(500).send({ err: 'Failed to bump popularity' })
+    }
+  }
+
+  static isPlaygroundAllowed(req: Request, res: Response) {
+    if (process.env.NODE_ENV === 'production') {
+      res.status(404).send({ err: 'Not found' })
+      return false
+    }
+    const expected =
+      process.env.PLAYGROUND_KEY || 'dev-playground'
+    const provided = req.headers['x-playground-key']
+    if (provided !== expected) {
+      res.status(401).send({ err: 'Playground key required' })
+      return false
+    }
+    return true
+  }
+
+  static async playgroundList(req: Request, res: Response) {
+    if (!this.isPlaygroundAllowed(req, res)) return
+    try {
+      const { q, type, page, limit } = req.query as {
+        q?: string
+        type?: string
+        page?: string
+        limit?: string
+      }
+      const result = await ItemService.listForPlayground({
+        q,
+        type,
+        page: page ? Number(page) : 0,
+        limit: limit ? Number(limit) : 80,
+      })
+      res.json(result)
+    } catch (err: any) {
+      logger.error('Failed to list playground items', err)
+      res.status(500).send({ err: 'Failed to list playground items' })
+    }
+  }
+
+  static async playgroundSave(req: Request, res: Response) {
+    if (!this.isPlaygroundAllowed(req, res)) return
+    try {
+      const item = req.body
+      if (item?._id) {
+        const updated = await ItemService.update(item._id, item)
+        return res.json(updated)
+      }
+      delete item._id
+      const added = await ItemService.add(item)
+      res.json(added)
+    } catch (err: any) {
+      logger.error('Failed to save playground item', err)
+      res.status(500).send({ err: 'Failed to save playground item' })
+    }
+  }
+
+  static async playgroundDelete(req: Request, res: Response) {
+    if (!this.isPlaygroundAllowed(req, res)) return
+    try {
+      await ItemService.remove(req.params.id)
+      res.send({ msg: 'Deleted successfully' })
+    } catch (err: any) {
+      logger.error('Failed to delete playground item', err)
+      res.status(500).send({ err: 'Failed to delete playground item' })
+    }
+  }
+
+  static async playgroundApply(req: Request, res: Response) {
+    if (!this.isPlaygroundAllowed(req, res)) return
+    try {
+      const { items } = req.body as { items?: unknown }
+      if (!Array.isArray(items)) {
+        return res.status(400).send({ err: 'Items array is required' })
+      }
+      const result = await ItemService.applyCatalog(items as any)
+      res.json(result)
+    } catch (err: any) {
+      logger.error('Failed to apply catalog', err)
+      res.status(500).send({ err: 'Failed to apply catalog' })
+    }
+  }
 }

@@ -2,8 +2,7 @@ import { ItemModel, IItem } from './item.model'
 import { logger } from '../../services/logger.service'
 import { Item } from '@/types/Item/Item'
 import { MealService } from '../meal/meal.service'
-import { TranslateService } from '../translate/translate.service'
-import { isEnglishWord } from '../../services/utils'
+import { ItemName, LocalizedName } from '@/types/Item/LocalizedName'
 
 export class ItemService {
   /**
@@ -28,269 +27,114 @@ export class ItemService {
     return term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   }
 
+  private static hasHebrew(value: string) {
+    return /[\u0590-\u05FF]/.test(value)
+  }
+
+  private static hasLatin(value: string) {
+    return /[a-zA-Z]/.test(value)
+  }
+
+  private static toLocalizedName(name: unknown): LocalizedName {
+    if (name && typeof name === 'object') {
+      const localized = name as LocalizedName
+      return {
+        eng: localized.eng || '',
+        he: localized.he || '',
+        default: localized.default || localized.eng || localized.he || '',
+      }
+    }
+
+    const raw = String(name || '').trim()
+    if (!raw) return { eng: '', he: '', default: '' }
+    if (this.hasHebrew(raw) && !this.hasLatin(raw)) {
+      return { eng: '', he: raw, default: raw }
+    }
+    if (this.hasLatin(raw) && !this.hasHebrew(raw)) {
+      return { eng: raw, he: '', default: raw }
+    }
+    return { eng: raw, he: raw, default: raw }
+  }
+
+  private static getNameStrings(item: { name?: ItemName }): string[] {
+    const name = item.name
+    if (!name) return []
+    if (typeof name === 'string') return [name]
+    return [name.eng, name.he, name.default].filter(Boolean)
+  }
+
   /**
    * Get cached items by search term
    */
-  
-
   static async getBySearchTerm(searchTerm: string): Promise<IItem[]> {
     try {
       const normalizedTerm = this.normalizeSearchTerm(searchTerm)
-  
-      const translateSign = isEnglishWord(normalizedTerm) ? 'he' : 'en'
-  
-      const translatedTerm = await TranslateService.translate(
-        normalizedTerm,
-        translateSign
-      )
-  
-      const normalizedTranslatedTerm = this.normalizeSearchTerm(translatedTerm)
-  
-      logger.info(`searchTerm: ${searchTerm}`)
-      logger.info(`normalizedTerm: ${normalizedTerm}`)
-      logger.info(`normalizedTranslatedTerm: ${normalizedTranslatedTerm}`)
-  
-      const searchVariants = this.getSearchVariants(normalizedTerm)
-      const translatedVariants = this.getSearchVariants(normalizedTranslatedTerm)
-  
+      if (!normalizedTerm) return []
+
       const allVariants = [
-        ...new Set([
-          normalizedTerm,
-          normalizedTranslatedTerm,
-          ...searchVariants,
-          ...translatedVariants,
-        ].map(term => this.normalizeSearchTerm(term))),
+        ...new Set(
+          [normalizedTerm, ...this.getSearchVariants(normalizedTerm)].map(
+            (term) => this.normalizeSearchTerm(term)
+          )
+        ),
       ].filter(Boolean)
-  
-      const escapedVariants = allVariants.map(term => this.escapeRegex(term))
-  
-      const items = await ItemModel.aggregate([
-        {
-          $match: {
-            $or: escapedVariants.flatMap(term => [
-              {
-                name: {
-                  $regex: term,
-                  $options: 'i',
-                },
-              },
-              {
-                searchTerms: {
-                  $elemMatch: {
-                    $regex: term,
-                    $options: 'i',
-                  },
-                },
-              },
-  
-              // temporary fallback for old documents
-              {
-                searchTerm: {
-                  $regex: term,
-                  $options: 'i',
-                },
-              },
-            ]),
-          },
-        },
-        {
-          $addFields: {
-            _nameLower: {
-              $toLower: {
-                $ifNull: ['$name', ''],
-              },
-            },
-            _searchTermsLower: {
-              $map: {
-                input: {
-                  $ifNull: ['$searchTerms', []],
-                },
-                as: 'term',
-                in: {
-                  $toLower: '$$term',
-                },
-              },
-            },
-            _searchTermLower: {
-              $toLower: {
-                $ifNull: ['$searchTerm', ''],
-              },
-            },
-          },
-        },
-        {
-          $addFields: {
-            searchRank: {
-              $switch: {
-                branches: [
-                  // exact match in new searchTerms
-                  {
-                    case: {
-                      $anyElementTrue: {
-                        $map: {
-                          input: '$_searchTermsLower',
-                          as: 'term',
-                          in: {
-                            $in: ['$$term', allVariants],
-                          },
-                        },
-                      },
-                    },
-                    then: 100,
-                  },
-  
-                  // exact match in old searchTerm fallback
-                  {
-                    case: {
-                      $in: ['$_searchTermLower', allVariants],
-                    },
-                    then: 95,
-                  },
-  
-                  // exact name match
-                  {
-                    case: {
-                      $in: ['$_nameLower', allVariants],
-                    },
-                    then: 90,
-                  },
-  
-                  // searchTerms starts with query
-                  {
-                    case: {
-                      $anyElementTrue: {
-                        $map: {
-                          input: '$_searchTermsLower',
-                          as: 'term',
-                          in: {
-                            $or: escapedVariants.map(term => ({
-                              $regexMatch: {
-                                input: '$$term',
-                                regex: `^${term}`,
-                                options: 'i',
-                              },
-                            })),
-                          },
-                        },
-                      },
-                    },
-                    then: 80,
-                  },
-  
-                  // old searchTerm starts with query
-                  {
-                    case: {
-                      $or: escapedVariants.map(term => ({
-                        $regexMatch: {
-                          input: '$_searchTermLower',
-                          regex: `^${term}`,
-                          options: 'i',
-                        },
-                      })),
-                    },
-                    then: 75,
-                  },
-  
-                  // name starts with query
-                  {
-                    case: {
-                      $or: escapedVariants.map(term => ({
-                        $regexMatch: {
-                          input: '$_nameLower',
-                          regex: `^${term}`,
-                          options: 'i',
-                        },
-                      })),
-                    },
-                    then: 70,
-                  },
-  
-                  // searchTerms contains query
-                  {
-                    case: {
-                      $anyElementTrue: {
-                        $map: {
-                          input: '$_searchTermsLower',
-                          as: 'term',
-                          in: {
-                            $or: escapedVariants.map(term => ({
-                              $regexMatch: {
-                                input: '$$term',
-                                regex: term,
-                                options: 'i',
-                              },
-                            })),
-                          },
-                        },
-                      },
-                    },
-                    then: 60,
-                  },
-  
-                  // old searchTerm contains query
-                  {
-                    case: {
-                      $or: escapedVariants.map(term => ({
-                        $regexMatch: {
-                          input: '$_searchTermLower',
-                          regex: term,
-                          options: 'i',
-                        },
-                      })),
-                    },
-                    then: 55,
-                  },
-  
-                  // name contains query
-                  {
-                    case: {
-                      $or: escapedVariants.map(term => ({
-                        $regexMatch: {
-                          input: '$_nameLower',
-                          regex: term,
-                          options: 'i',
-                        },
-                      })),
-                    },
-                    then: 50,
-                  },
-                ],
-                default: 0,
-              },
-            },
-          },
-        },
-        {
-          $sort: {
-            searchRank: -1,
-            name: 1,
-            _id: 1,
-          },
-        },
-        {
-          $project: {
-            _nameLower: 0,
-            _searchTermsLower: 0,
-            _searchTermLower: 0,
-            searchRank: 0,
-          },
-        },
-      ])
-  
+
+      const escapedVariants = allVariants.map((term) => this.escapeRegex(term))
+
+      const items = await ItemModel.find({
+        $or: escapedVariants.flatMap((term) => [
+          { 'name.eng': { $regex: term, $options: 'i' } },
+          { 'name.he': { $regex: term, $options: 'i' } },
+          { 'name.default': { $regex: term, $options: 'i' } },
+          { name: { $regex: term, $options: 'i' } },
+          { searchTerms: { $regex: term, $options: 'i' } },
+          { searchTerm: { $regex: term, $options: 'i' } },
+        ]),
+      })
+        .sort({ popularity: -1, _id: 1 })
+        .limit(40)
+        .lean()
+
       const meals = (await MealService.query({
-        $or: escapedVariants.map(term => ({
-          name: {
-            $regex: term,
-            $options: 'i',
-          },
-        })),
+        name: {
+          $regex: this.escapeRegex(normalizedTerm),
+          $options: 'i',
+        },
       })) as unknown as IItem[]
-  
-      return [...items, ...meals]
+
+      const ranked = this.rankSearchResults(items as IItem[], allVariants)
+      return [...ranked, ...meals]
     } catch (err) {
       logger.error(`Failed to get items by search term ${searchTerm}`, err)
       throw err
     }
+  }
+
+  private static rankSearchResults(items: IItem[], variants: string[]) {
+    const variantSet = new Set(variants)
+
+    const rank = (item: IItem) => {
+      const names = this.getNameStrings(item).map((name) =>
+        this.normalizeSearchTerm(name)
+      )
+      const terms = (item.searchTerms || []).map((term) =>
+        this.normalizeSearchTerm(term)
+      )
+      const haystack = [...names, ...terms]
+
+      if (haystack.some((value) => variantSet.has(value))) return 100
+      if (haystack.some((value) => variants.some((v) => value.startsWith(v))))
+        return 80
+      if (haystack.some((value) => variants.some((v) => value.includes(v))))
+        return 50
+      return 10
+    }
+
+    return [...items].sort((a, b) => {
+      const rankDiff = rank(b) - rank(a)
+      if (rankDiff !== 0) return rankDiff
+      return (b.popularity || 0) - (a.popularity || 0)
+    })
   }
 
   private static getSearchVariants(term: string): string[] {
@@ -337,42 +181,8 @@ export class ItemService {
    */
   static async hasCachedResults(searchTerm: string): Promise<boolean> {
     try {
-      const translateSign = isEnglishWord(searchTerm) ? 'he' : 'en'
-
-      const normalizedTerm = this.normalizeSearchTerm(searchTerm)
-      const translatedTerm = await TranslateService.translate(
-        normalizedTerm,
-        translateSign
-      )
-      const normalizedTranslatedTerm = this.normalizeSearchTerm(translatedTerm)
-      const count = await ItemModel.countDocuments({
-        $or: [
-          {
-            searchTerm: {
-              $elemMatch: {
-                $regex: this.escapeRegex(normalizedTerm),
-                $options: 'i',
-              },
-            },
-          },
-          {
-            searchTerm: {
-              $elemMatch: {
-                $regex: this.escapeRegex(normalizedTranslatedTerm),
-                $options: 'i',
-              },
-            },
-          },
-          { name: { $regex: this.escapeRegex(normalizedTerm), $options: 'i' } },
-          {
-            name: {
-              $regex: this.escapeRegex(normalizedTranslatedTerm),
-              $options: 'i',
-            },
-          },
-        ],
-      })
-      return count > 0
+      const items = await this.getBySearchTerm(searchTerm)
+      return items.length > 0
     } catch (err) {
       logger.error(`Failed to check cached results for ${searchTerm}`, err)
       throw err
@@ -420,10 +230,17 @@ export class ItemService {
       }
 
       // Save only new items
-      const itemsToSave = newItems.map((item) => ({
-        ...item,
-        searchTerm: normalizedTerm,
-      }))
+      const itemsToSave = newItems.map((item) => {
+        const { _id, ...rest } = item as Item & { _id?: string }
+        void _id
+        return {
+          ...rest,
+          name: this.toLocalizedName(item.name),
+          searchTerm: normalizedTerm,
+          popularity: item.popularity ?? 8,
+          isCurated: false,
+        }
+      })
 
       const savedItems = await ItemModel.insertMany(itemsToSave, {
         ordered: false,
@@ -521,8 +338,11 @@ export class ItemService {
       if (item.searchTerm) {
         item.searchTerm = this.normalizeSearchTerm(item.searchTerm)
       } else {
-        item.searchTerm = this.normalizeSearchTerm(item.name || '')
+        const names = this.getNameStrings(item)
+        item.searchTerm = this.normalizeSearchTerm(names[0] || '')
       }
+      item.name = this.toLocalizedName(item.name)
+      if (item.popularity == null) item.popularity = 8
       const addedItem = await ItemModel.create(item)
       return addedItem
     } catch (err) {
@@ -543,6 +363,9 @@ export class ItemService {
         itemToUpdate.searchTerm = this.normalizeSearchTerm(
           itemToUpdate.searchTerm
         )
+      }
+      if (itemToUpdate.name !== undefined) {
+        itemToUpdate.name = this.toLocalizedName(itemToUpdate.name)
       }
       const item = await ItemModel.findByIdAndUpdate(itemId, itemToUpdate, {
         new: true,
@@ -612,10 +435,108 @@ export class ItemService {
     }
   }
 
+  static async bumpPopularity(searchId: string): Promise<IItem | null> {
+    try {
+      if (!searchId) return null
+      const item = await ItemModel.findOneAndUpdate(
+        { searchId },
+        { $inc: { popularity: 1 } },
+        { new: true }
+      )
+      return item
+    } catch (err) {
+      logger.error(`Failed to bump popularity for ${searchId}`, err)
+      throw err
+    }
+  }
 
+  static async listForPlayground(filter: {
+    q?: string
+    type?: string
+    page?: number
+    limit?: number
+  }) {
+    const page = Math.max(0, Number(filter.page) || 0)
+    const limit = Math.min(200, Math.max(1, Number(filter.limit) || 80))
+    const query: Record<string, unknown> = {}
 
-  
+    if (filter.type && filter.type !== 'all') {
+      query.type = filter.type
+    }
 
+    if (filter.q) {
+      const term = this.escapeRegex(this.normalizeSearchTerm(filter.q))
+      query.$or = [
+        { 'name.eng': { $regex: term, $options: 'i' } },
+        { 'name.he': { $regex: term, $options: 'i' } },
+        { 'name.default': { $regex: term, $options: 'i' } },
+        { name: { $regex: term, $options: 'i' } },
+        { searchTerms: { $regex: term, $options: 'i' } },
+        { searchId: { $regex: term, $options: 'i' } },
+      ]
+    }
 
-  
+    const [items, total] = await Promise.all([
+      ItemModel.find(query)
+        .sort({ popularity: -1, _id: 1 })
+        .skip(page * limit)
+        .limit(limit)
+        .lean(),
+      ItemModel.countDocuments(query),
+    ])
+
+    return { items, total, page, limit }
+  }
+
+  static async applyCatalog(items: Item[]) {
+    try {
+      await ItemModel.collection.dropIndex('name_text')
+    } catch {
+      // index may not exist after the first migration
+    }
+
+    const foods = items.filter((item) => item.type === 'food')
+    const products = items.filter((item) => item.type === 'product')
+
+    await ItemModel.deleteMany({ type: 'food' })
+
+    if (foods.length) {
+      await ItemModel.insertMany(
+        foods.map((item) => {
+          const { _id, ...rest } = item as Item & { _id?: string }
+          void _id
+          return {
+            ...rest,
+            name: this.toLocalizedName(rest.name),
+            isCurated: true,
+            popularity: rest.popularity ?? 50,
+          }
+        })
+      )
+    }
+
+    for (const product of products) {
+      const { _id, ...rest } = product as Item & { _id?: string }
+      void _id
+      if (!rest.searchId) continue
+      await ItemModel.updateOne(
+        { searchId: rest.searchId },
+        {
+          $set: {
+            ...rest,
+            name: this.toLocalizedName(rest.name),
+            type: 'product',
+            isCurated: false,
+            popularity: rest.popularity ?? 14,
+          },
+        },
+        { upsert: true }
+      )
+    }
+
+    return {
+      foods: foods.length,
+      products: products.length,
+    }
+  }
 }

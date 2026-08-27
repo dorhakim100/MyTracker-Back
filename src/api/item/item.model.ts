@@ -1,26 +1,27 @@
 import mongoose from 'mongoose'
-import { Item } from '@/types/Item/Item'
 import { Macros } from '@/types/Macros/Macros'
 import { MealItem } from '@/types/MealItem/MealItem'
+import { ItemName } from '@/types/Item/LocalizedName'
 
 export interface IItem extends mongoose.Document {
-  name: string
+  name: ItemName
   searchId?: string
-  searchTerm?: string // Normalized search term for caching
-  searchTerms?: string[] // Normalized search terms for caching
+  searchTerm?: string
+  searchTerms?: string[]
   image?: string
   macros: Macros
   type: 'food' | 'product' | 'meal' | 'custom' | ''
-  items?: MealItem[] // for meal type
+  items?: MealItem[]
   isImageSearched?: boolean
+  popularity?: number
+  isCurated?: boolean
 }
 
 const itemSchema = new mongoose.Schema(
   {
     name: {
-      type: String,
+      type: mongoose.Schema.Types.Mixed,
       required: true,
-      index: true,
     },
     searchId: {
       type: String,
@@ -57,6 +58,15 @@ const itemSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    popularity: {
+      type: Number,
+      default: 0,
+      index: true,
+    },
+    isCurated: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
@@ -64,8 +74,10 @@ const itemSchema = new mongoose.Schema(
   }
 )
 
-// Compound index for efficient search term lookups
 itemSchema.index({ searchTerm: 1, searchId: 1 })
-itemSchema.index({ name: 'text' }) // Text index for name searches
+itemSchema.index({ 'name.eng': 1, popularity: -1 })
+itemSchema.index({ 'name.he': 1, popularity: -1 })
+itemSchema.index({ 'name.default': 1, popularity: -1 })
+itemSchema.index({ popularity: -1, type: 1 })
 
 export const ItemModel = mongoose.model<IItem>('Item', itemSchema)
