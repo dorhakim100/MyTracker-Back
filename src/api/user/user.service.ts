@@ -14,6 +14,7 @@ import { GoalService } from '../goal/goal.service'
 import { LogService } from '../log/log.service'
 import { WeightService } from '../weight/weight.service'
 import { TrainerRequestService } from '../trainer-request/trainer-request.service'
+import { WorkoutService } from '../workout/workout.service'
 
 export class UserService {
   static async query(filterBy: { txt?: string; searchingUserId?: string }) {
@@ -306,9 +307,18 @@ export class UserService {
         return null
       }
 
+      const countedUserId = String(user._id)
+      const activeWorkoutsCount =
+        await WorkoutService.getActiveWorkoutsCount(countedUserId)
+
+      if (user.activeWorkoutsCount !== activeWorkoutsCount) {
+        await User.findByIdAndUpdate(countedUserId, { activeWorkoutsCount })
+      }
+
       return {
         ...user,
         details: normalizeUserDetails(user.details as UserDetailsFields),
+        activeWorkoutsCount,
       }
     } catch (err) {
       logger.error(`Failed to get user ${userId}`, err)

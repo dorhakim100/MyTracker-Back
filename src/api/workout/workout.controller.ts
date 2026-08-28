@@ -5,12 +5,28 @@ import { logger } from '../../services/logger.service'
 export class WorkoutController {
   static async getWorkouts(req: Request, res: Response) {
     try {
-      const filter = {
-        from:
-          (req.query.from as string) ||
-          new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString(),
-        to: (req.query.to as string) || new Date().toISOString(),
-        forUserId: (req.query.forUserId as string) || '',
+      const forUserId = (req.query.forUserId as string) || ''
+      const from = req.query.from as string | undefined
+      const to = req.query.to as string | undefined
+      const limit = req.query.limit ? Number(req.query.limit) : undefined
+      const isAll = req.query.all === 'true'
+
+      const filter: {
+        forUserId: string
+        from?: string
+        to?: string
+        limit?: number
+      } = { forUserId }
+
+      if (!isAll) {
+        if (limit && !Number.isNaN(limit)) {
+          filter.limit = limit
+        } else if (from || to) {
+          if (from) filter.from = from
+          if (to) filter.to = to
+        } else {
+          filter.limit = 6
+        }
       }
 
       const workouts = await WorkoutService.query(filter)

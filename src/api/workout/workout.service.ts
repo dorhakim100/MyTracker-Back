@@ -1,6 +1,11 @@
 import { Workout, IWorkout } from './workout.model'
 import mongoose from 'mongoose'
 import { logger } from '../../services/logger.service'
+import { User } from '../user/user.model'
+
+const NON_EMPTY_WORKOUT_MATCH = {
+  $or: [{ isEmpty: false }, { isEmpty: { $exists: false } }],
+}
 
 export class WorkoutService {
   static getEmptyWorkout(forUserId: string) {
@@ -14,9 +19,10 @@ export class WorkoutService {
     }
   }
   static async query(filterBy: {
-    from: string
-    to: string
+    from?: string
+    to?: string
     forUserId: string
+    limit?: number
   }) {
     try {
       const workouts = await Workout.aggregate([
@@ -24,45 +30,62 @@ export class WorkoutService {
           $match: {
             forUserId: filterBy.forUserId,
             isActive: true,
-            $or: [{ isEmpty: false }, { isEmpty: { $exists: false } }],
+            ...NON_EMPTY_WORKOUT_MATCH,
           },
         },
         ...this.getIsNewInstructionsPipeline(),
       ])
 
-      const from = new Date(filterBy.from)
-      const to = new Date(filterBy.to)
+      const inactiveMatch: Record<string, unknown> = {
+        forUserId: filterBy.forUserId,
+        isActive: false,
+        ...NON_EMPTY_WORKOUT_MATCH,
+      }
 
-      // Extend "to" to the *end* of that day
-      to.setHours(23, 59, 59, 999)
-      // Extend "from" to the *start* of that day
-      from.setHours(0, 0, 0, 0)
+      if (filterBy.from || filterBy.to) {
+        const from = filterBy.from ? new Date(filterBy.from) : new Date(0)
+        const to = filterBy.to ? new Date(filterBy.to) : new Date()
+        from.setHours(0, 0, 0, 0)
+        to.setHours(23, 59, 59, 999)
+        inactiveMatch.updatedAt = {
+          $gte: from,
+          $lte: to,
+        }
+      }
 
-      const inActiveWorkouts = await Workout.aggregate([
-        {
-          $match: {
-            forUserId: filterBy.forUserId,
-            isActive: false,
-            $or: [{ isEmpty: false }, { isEmpty: { $exists: false } }],
-            createdAt: {
-              $gte: from,
-              $lte: to,
-            },
-            updatedAt: {
-              $gte: from,
-              $lte: to,
-            },
-          },
-        },
-        { $sort: { createdAt: -1 } },
-        ...this.getIsNewInstructionsPipeline(),
-      ])
+      const inactivePipeline: any[] = [
+        { $match: inactiveMatch },
+        { $sort: { updatedAt: -1 } },
+      ]
+
+      if (filterBy.limit && filterBy.limit > 0) {
+        inactivePipeline.push({ $limit: filterBy.limit })
+      }
+
+      inactivePipeline.push(...this.getIsNewInstructionsPipeline())
+
+      const inActiveWorkouts = await Workout.aggregate(inactivePipeline)
 
       return [...workouts, ...inActiveWorkouts]
     } catch (err) {
       logger.error('Failed to query workouts', err)
       throw err
     }
+  }
+
+  static async getActiveWorkoutsCount(forUserId: string) {
+    return Workout.countDocuments({
+      forUserId,
+      isActive: true,
+      ...NON_EMPTY_WORKOUT_MATCH,
+    })
+  }
+
+  static async syncActiveWorkoutsCount(forUserId?: string) {
+    if (!forUserId) return 0
+    const count = await this.getActiveWorkoutsCount(forUserId)
+    await User.findByIdAndUpdate(forUserId, { activeWorkoutsCount: count })
+    return count
   }
 
   static async getById(workoutId: string) {
@@ -81,6 +104,7 @@ export class WorkoutService {
   static async add(workout: Partial<IWorkout>) {
     try {
       const addedWorkout = await Workout.create(workout)
+      await this.syncActiveWorkoutsCount(addedWorkout.forUserId)
       return addedWorkout
     } catch (err) {
       logger.error('Failed to add workout', err)
@@ -97,6 +121,7 @@ export class WorkoutService {
           new: true,
         }
       )
+      await this.syncActiveWorkoutsCount(workout?.forUserId)
       return workout
     } catch (err) {
       logger.error(`Failed to update workout ${workoutId}`, err)
@@ -106,7 +131,9 @@ export class WorkoutService {
 
   static async remove(workoutId: string) {
     try {
+      const workout = await Workout.findById(workoutId)
       await Workout.findByIdAndDelete(workoutId)
+      await this.syncActiveWorkoutsCount(workout?.forUserId)
     } catch (err) {
       logger.error(`Failed to remove workout ${workoutId}`, err)
       throw err

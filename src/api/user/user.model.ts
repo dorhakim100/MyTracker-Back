@@ -24,6 +24,7 @@ export interface IUser extends mongoose.Document {
   googleId?: string
   googleRefreshToken?: string
   googleHealthConnectedAt?: Date
+  activeWorkoutsCount?: number
 }
 
 interface UserDetails {
@@ -124,6 +125,9 @@ const userSchema = new mongoose.Schema(
     },
     googleHealthConnectedAt: {
       type: Date,
+    },
+    activeWorkoutsCount: {
+      type: Number,
     },
   },
   {
