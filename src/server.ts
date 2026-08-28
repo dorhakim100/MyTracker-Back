@@ -28,6 +28,7 @@ import { exerciseRoutes } from './api/exercise/exercise.routes'
 import { chatGPTRoutes } from './api/chatGPT/gpt.routes'
 import { bodyFatRoutes } from './api/body-fat/body-fat.routes'
 import { googleHealthRoutes } from './api/health/google-health.routes'
+import { messageRoutes } from './api/message/message.routes'
 
 import { setupSocketAPI } from './services/socket/socket.service'
 import { setupAsyncLocalStorage } from './middleware/setupAls.middleware'
@@ -128,6 +129,7 @@ app.use('/api/exercise', exerciseRoutes)
 app.use('/api/chatgpt', chatGPTRoutes)
 app.use('/api/body-fat', bodyFatRoutes)
 app.use('/api/health/google', googleHealthRoutes)
+app.use('/api/message', messageRoutes)
 
 app.use('/api/translate', translateRoutes)
 

@@ -5,6 +5,8 @@ import { GoogleHealthSnapshotService } from '../../api/health/google-health-snap
 import { logger } from '../logger.service'
 import type { JWTPayload } from '../../middleware/auth.middleware'
 import { HealthSocketGateway } from './health-socket.gateway'
+import { ChatSocketGateway } from './chat-socket.gateway'
+import { MessageService } from '../../api/message/message.service'
 
 const allowedOrigins = new Set([
   'http://localhost:5173',
@@ -98,6 +100,31 @@ export const setupSocketAPI = (server: HttpServer) => {
       socket.leave(requestedRoom)
       logger.info(`Client: ${socket.id} left room: ${requestedRoom}`)
     })
+
+    socket.on(
+      'exercise-chat:join',
+      async (data: { workoutId?: string; exerciseId?: string }) => {
+        const workoutId = data?.workoutId
+        const exerciseId = data?.exerciseId
+        if (!workoutId || !exerciseId) return
+        try {
+          await MessageService.assertCanAccessWorkout(userId, workoutId)
+          socket.join(ChatSocketGateway.getRoom(workoutId, exerciseId))
+        } catch (err) {
+          logger.error('Failed to join exercise chat room', err)
+        }
+      }
+    )
+
+    socket.on(
+      'exercise-chat:leave',
+      (data: { workoutId?: string; exerciseId?: string }) => {
+        const workoutId = data?.workoutId
+        const exerciseId = data?.exerciseId
+        if (!workoutId || !exerciseId) return
+        socket.leave(ChatSocketGateway.getRoom(workoutId, exerciseId))
+      }
+    )
 
     socket.on('chat-send-msg', (data: { room: string; msg: unknown }) => {
       logger.info(
