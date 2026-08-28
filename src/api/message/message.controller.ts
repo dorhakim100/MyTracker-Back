@@ -191,7 +191,9 @@ export class MessageController {
 
       const asRole = (req.query.asRole as MessageRole) || 'trainee'
       if (asRole !== 'trainer' && asRole !== 'trainee') {
-        return res.status(400).send({ err: 'asRole must be trainer or trainee' })
+        return res
+          .status(400)
+          .send({ err: 'asRole must be trainer or trainee' })
       }
 
       const summary = await MessageService.unreadSummary(userId, asRole)

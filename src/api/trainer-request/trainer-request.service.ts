@@ -1,5 +1,4 @@
 import { TrainerRequest, ITrainerRequest } from './trainer-request.model'
-import { User } from '../user/user.model'
 import { logger } from '../../services/logger.service'
 import mongoose from 'mongoose'
 import { UserService } from '../user/user.service'
@@ -309,6 +308,10 @@ export class TrainerRequestService {
         status,
       })
 
+      if (status === 'approved') {
+        await UserService.addTrainerId(traineeId, trainerId)
+      }
+
       return newRequest
     } catch (err: any) {
       logger.error('Failed to create trainer request', err)
@@ -328,10 +331,7 @@ export class TrainerRequestService {
         throw new Error('Request not found')
       }
 
-      // Add trainerId to trainee's trainersIds array
-      await User.findByIdAndUpdate(request.traineeId, {
-        $addToSet: { trainersIds: request.trainerId },
-      })
+      await UserService.addTrainerId(request.traineeId, request.trainerId)
 
       return request
     } catch (err: any) {
@@ -366,11 +366,8 @@ export class TrainerRequestService {
         throw new Error('Request not found')
       }
 
-      // If request was approved, remove trainerId from trainee's trainersIds
       if (request.status === 'approved') {
-        await User.findByIdAndUpdate(request.traineeId, {
-          $pull: { trainersIds: request.trainerId },
-        })
+        await UserService.removeTrainerId(request.traineeId, request.trainerId)
       }
 
       await TrainerRequest.findByIdAndDelete(requestId)

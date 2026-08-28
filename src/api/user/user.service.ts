@@ -7,6 +7,7 @@ import {
   normalizeUserDetails,
   type UserDetailsFields,
 } from './user-details.util'
+import { sanitizeUserUpdate } from './user-update.util'
 import { logger } from '../../services/logger.service'
 import { Goal } from '@/types/Goal/Goal'
 import { GoalService } from '../goal/goal.service'
@@ -342,24 +343,23 @@ export class UserService {
 
   static async update(userId: string, userToUpdate: Partial<IUser>) {
     try {
-      delete userToUpdate.goals
-      delete userToUpdate.currGoal
+      const sanitized = sanitizeUserUpdate(
+        userToUpdate as unknown as Record<string, unknown>
+      )
 
-      if (userToUpdate.details) {
+      if (sanitized.details) {
         const existingUser = await User.findById(userId).select('details')
         if (!existingUser) {
           throw new Error('User not found')
         }
 
-        userToUpdate.details = applyDailyStepsGoalUpdate(
+        sanitized.details = applyDailyStepsGoalUpdate(
           existingUser.details as UserDetailsFields,
-          userToUpdate.details as Partial<UserDetailsFields>
+          sanitized.details as Partial<UserDetailsFields>
         )
       }
 
-      await User.findByIdAndUpdate(userId, userToUpdate, {
-        new: true,
-      })
+      await User.findByIdAndUpdate(userId, { $set: sanitized }, { new: true })
 
       const aggregatedUser = await UserService.getById(userId)
 
@@ -368,6 +368,18 @@ export class UserService {
       logger.error(`Failed to update user ${userId}`, err)
       throw err
     }
+  }
+
+  static async addTrainerId(traineeId: string, trainerId: string) {
+    await User.findByIdAndUpdate(traineeId, {
+      $addToSet: { trainersIds: trainerId },
+    })
+  }
+
+  static async removeTrainerId(traineeId: string, trainerId: string) {
+    await User.findByIdAndUpdate(traineeId, {
+      $pull: { trainersIds: trainerId },
+    })
   }
 
   static async addTrainee(traineeForm: {

@@ -42,20 +42,29 @@ export class AuthService {
       throw new Error('Email already exists')
 
     const hash = await bcrypt.hash(credentials.password, saltRounds)
-    credentials.password = hash
 
     const defaultLoggedToday = DayService.getDefaultLoggedToday()
 
     let user
 
     if (userExist && userExist.isAddedByTrainer && userExist.password === '') {
-      user = await User.findByIdAndUpdate(userExist._id, {
-        ...credentials,
-        loggedToday: defaultLoggedToday._id,
-      })
+      user = await User.findByIdAndUpdate(
+        userExist._id,
+        {
+          $set: {
+            email: credentials.email,
+            password: hash,
+            'details.fullname': credentials.fullname,
+            loggedToday: defaultLoggedToday._id,
+          },
+        },
+        { new: true }
+      )
     } else if (!userExist) {
       user = await User.create({
-        ...credentials,
+        email: credentials.email,
+        password: hash,
+        details: UserService.getDefaultDetails(credentials.fullname),
         loggedToday: defaultLoggedToday._id,
       })
     }

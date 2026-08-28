@@ -104,6 +104,7 @@ const SENDER_LOOKUP = [
 export class MessageService {
   static async getWorkoutOrThrow(workoutId: string) {
     const workout = await WorkoutService.getById(workoutId)
+
     if (!workout) {
       throw new NotFoundError('Workout not found')
     }
@@ -140,9 +141,7 @@ export class MessageService {
     if (role === 'trainee') {
       return workout.forUserId === userId
     }
-    return (
-      workout.forUserId === userId || trainerIds.includes(String(userId))
-    )
+    return workout.forUserId === userId || trainerIds.includes(String(userId))
   }
 
   static async assertCanActAsRole(
@@ -151,10 +150,13 @@ export class MessageService {
     role: MessageRole
   ) {
     const workout = await this.assertCanAccessWorkout(userId, workoutId)
+
     const trainee = await User.findById(workout.forUserId)
       .select('trainersIds')
       .lean()
+    console.log('trainee', trainee)
     const trainerIds = (trainee?.trainersIds || []).map(String)
+    console.log('trainerIds', trainerIds)
     if (!this.canActAsRole(userId, workout, role, trainerIds)) {
       throw new AccessDeniedError()
     }
@@ -179,7 +181,11 @@ export class MessageService {
     return doc || null
   }
 
-  static async listByRoom(userId: string, workoutId: string, exerciseId: string) {
+  static async listByRoom(
+    userId: string,
+    workoutId: string,
+    exerciseId: string
+  ) {
     await this.assertCanAccessWorkout(userId, workoutId)
     return Message.aggregate([
       {
@@ -274,11 +280,7 @@ export class MessageService {
     return existing
   }
 
-  static async markRead(
-    userId: string,
-    workoutId: string,
-    exerciseId: string
-  ) {
+  static async markRead(userId: string, workoutId: string, exerciseId: string) {
     await this.assertCanAccessWorkout(userId, workoutId)
     await MessageRead.findOneAndUpdate(
       { userId, workoutId, exerciseId },
@@ -308,58 +310,58 @@ export class MessageService {
 
     const [rows, startedRows] = await Promise.all([
       Message.aggregate([
-      {
-        $match: {
-          workoutId: { $in: workoutIds },
-          role: otherRole,
-          deletedAt: null,
-        },
-      },
-      {
-        $lookup: {
-          from: 'messagereads',
-          let: {
-            workoutId: '$workoutId',
-            exerciseId: '$exerciseId',
+        {
+          $match: {
+            workoutId: { $in: workoutIds },
+            role: otherRole,
+            deletedAt: null,
           },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ['$userId', userId] },
-                    { $eq: ['$workoutId', '$$workoutId'] },
-                    { $eq: ['$exerciseId', '$$exerciseId'] },
-                  ],
+        },
+        {
+          $lookup: {
+            from: 'messagereads',
+            let: {
+              workoutId: '$workoutId',
+              exerciseId: '$exerciseId',
+            },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ['$userId', userId] },
+                      { $eq: ['$workoutId', '$$workoutId'] },
+                      { $eq: ['$exerciseId', '$$exerciseId'] },
+                    ],
+                  },
                 },
               },
-            },
-          ],
-          as: 'reads',
-        },
-      },
-      {
-        $addFields: {
-          lastReadAt: { $arrayElemAt: ['$reads.lastReadAt', 0] },
-        },
-      },
-      {
-        $match: {
-          $expr: {
-            $or: [
-              { $eq: [{ $ifNull: ['$lastReadAt', null] }, null] },
-              { $gt: ['$date', '$lastReadAt'] },
             ],
+            as: 'reads',
           },
         },
-      },
-      {
-        $group: {
-          _id: { workoutId: '$workoutId', exerciseId: '$exerciseId' },
-          count: { $sum: 1 },
+        {
+          $addFields: {
+            lastReadAt: { $arrayElemAt: ['$reads.lastReadAt', 0] },
+          },
         },
-      },
-    ]),
+        {
+          $match: {
+            $expr: {
+              $or: [
+                { $eq: [{ $ifNull: ['$lastReadAt', null] }, null] },
+                { $gt: ['$date', '$lastReadAt'] },
+              ],
+            },
+          },
+        },
+        {
+          $group: {
+            _id: { workoutId: '$workoutId', exerciseId: '$exerciseId' },
+            count: { $sum: 1 },
+          },
+        },
+      ]),
       Message.aggregate([
         {
           $match: {
@@ -429,7 +431,9 @@ export class MessageService {
         .lean() as Promise<Array<{ _id: unknown; forUserId: string }>>
     }
 
-    const trainees = await User.find({ trainersIds: userId }).select('_id').lean()
+    const trainees = await User.find({ trainersIds: userId })
+      .select('_id')
+      .lean()
     const traineeIds = trainees.map((t) => String(t._id))
     traineeIds.push(userId)
 
