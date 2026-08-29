@@ -142,9 +142,10 @@ export class ExerciseService {
     query: string
     muscleGroup?: string
     equipment?: string
-  }): Promise<IExercise[]> {
+    userId?: string
+  }): Promise<(IExercise & { isNew?: boolean })[]> {
     try {
-      const { query, muscleGroup, equipment } = params
+      const { query, muscleGroup, equipment, userId } = params
 
       const muscleGroupLower = muscleGroup?.toLocaleLowerCase()
       const equipmentLower = equipment?.toLocaleLowerCase()
@@ -188,12 +189,61 @@ export class ExerciseService {
       // Sort by combined score (descending)
       exercisesWithScores.sort((a, b) => b.combinedScore - a.combinedScore)
 
-      // Return just the exercises
-      return exercisesWithScores.map((item) => item.exercise).slice(0, 50)
+      const rankedExercises = exercisesWithScores
+        .map((item) => item.exercise)
+        .slice(0, 50)
+
+      return await this.withIsNew(rankedExercises, userId)
     } catch (err) {
       logger.error(`Failed to search exercises by name ${params.query}`, err)
       throw err
     }
+  }
+
+  private static async withIsNew(
+    exercises: IExercise[],
+    userId?: string
+  ): Promise<(IExercise & { isNew?: boolean })[]> {
+    if (!userId || exercises.length === 0) return exercises
+
+    const ids = exercises.map((exercise) => exercise.exerciseId)
+    const marked = await ExerciseModel.aggregate([
+      { $match: { exerciseId: { $in: ids } } },
+      {
+        $lookup: {
+          from: 'sets',
+          let: { exerciseId: '$exerciseId' },
+          pipeline: [
+            {
+              $match: {
+                userId,
+                isDone: true,
+                $expr: { $eq: ['$exerciseId', '$$exerciseId'] },
+              },
+            },
+            { $limit: 1 },
+            { $project: { _id: 1 } },
+          ],
+          as: '_doneSet',
+        },
+      },
+      {
+        $addFields: { isNew: { $eq: [{ $size: '$_doneSet' }, 0] } },
+      },
+      { $project: { _doneSet: 0 } },
+    ])
+
+    const byId = new Map(
+      marked.map((exercise) => [exercise.exerciseId, exercise])
+    )
+
+    return exercises.map((exercise) => {
+      const markedExercise = byId.get(exercise.exerciseId)
+      if (markedExercise) return markedExercise
+      const plain =
+        typeof exercise.toObject === 'function' ? exercise.toObject() : exercise
+      return { ...plain, isNew: true }
+    })
   }
 
   /**

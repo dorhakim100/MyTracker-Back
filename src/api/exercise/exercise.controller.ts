@@ -99,12 +99,17 @@ export class ExerciseController {
    */
   static async searchExercises(
     req: Request & {
-      query: { q: string; muscleGroup?: string; equipment?: string }
+      query: {
+        q: string
+        muscleGroup?: string
+        equipment?: string
+        userId?: string
+      }
     },
     res: Response
   ) {
     try {
-      const { q, muscleGroup, equipment } = req.query
+      const { q, muscleGroup, equipment, userId } = req.query
       if (!q || typeof q !== 'string') {
         return res.status(400).send({ err: 'Query parameter is required' })
       }
@@ -113,6 +118,7 @@ export class ExerciseController {
         query: q,
         muscleGroup,
         equipment,
+        userId,
       })
       res.json(exercises)
     } catch (err: any) {

@@ -12,4 +12,5 @@ export interface Exercise {
   secondaryMuscles?: string[]
   equipments?: string[]
   details?: ExerciseDetail
+  isNew?: boolean
 }

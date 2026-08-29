@@ -63,5 +63,6 @@ const setSchema = new mongoose.Schema(
 )
 
 setSchema.index({ sessionId: 1, exerciseId: 1, setNumber: 1 })
+setSchema.index({ userId: 1, exerciseId: 1, isDone: 1 })
 
 export const Set = mongoose.model<ISet>('Set', setSchema)

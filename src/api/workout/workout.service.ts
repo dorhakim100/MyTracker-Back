@@ -233,9 +233,61 @@ export class WorkoutService {
         },
       },
       {
+        $lookup: {
+          from: 'sets',
+          let: {
+            userId: '$forUserId',
+            exerciseIds: '$exercises.exerciseId',
+          },
+          pipeline: [
+            {
+              $match: {
+                isDone: true,
+                $expr: {
+                  $and: [
+                    { $eq: ['$userId', '$$userId'] },
+                    {
+                      $in: [
+                        '$exerciseId',
+                        { $ifNull: ['$$exerciseIds', []] },
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+            { $group: { _id: '$exerciseId' } },
+          ],
+          as: 'doneExercises',
+        },
+      },
+      {
+        $addFields: {
+          exercises: {
+            $map: {
+              input: { $ifNull: ['$exercises', []] },
+              as: 'exercise',
+              in: {
+                $mergeObjects: [
+                  '$$exercise',
+                  {
+                    isNew: {
+                      $not: {
+                        $in: ['$$exercise.exerciseId', '$doneExercises._id'],
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+      {
         $project: {
           workoutIdString: 0,
           instructions: 0,
+          doneExercises: 0,
         },
       },
     ]
