@@ -15,6 +15,7 @@ export interface IItem extends mongoose.Document {
   isImageSearched?: boolean
   popularity?: number
   isCurated?: boolean
+  categories?: string[]
 }
 
 const itemSchema = new mongoose.Schema(
@@ -67,6 +68,12 @@ const itemSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    categories: {
+      type: [String],
+      required: false,
+      default: [],
+      index: true,
+    },
   },
   {
     timestamps: true,
@@ -79,5 +86,6 @@ itemSchema.index({ 'name.eng': 1, popularity: -1 })
 itemSchema.index({ 'name.he': 1, popularity: -1 })
 itemSchema.index({ 'name.default': 1, popularity: -1 })
 itemSchema.index({ popularity: -1, type: 1 })
+itemSchema.index({ categories: 1, popularity: -1 })
 
 export const ItemModel = mongoose.model<IItem>('Item', itemSchema)

@@ -3,6 +3,7 @@ import { logger } from '../../services/logger.service'
 import { Item } from '@/types/Item/Item'
 import { MealService } from '../meal/meal.service'
 import { ItemName, LocalizedName } from '@/types/Item/LocalizedName'
+import { isItemCategoryId } from './item-categories'
 
 export class ItemService {
   /**
@@ -239,6 +240,7 @@ export class ItemService {
           searchTerm: normalizedTerm,
           popularity: item.popularity ?? 8,
           isCurated: false,
+          categories: Array.isArray(item.categories) ? item.categories : [],
         }
       })
 
@@ -343,6 +345,7 @@ export class ItemService {
       }
       item.name = this.toLocalizedName(item.name)
       if (item.popularity == null) item.popularity = 8
+      if (!Array.isArray(item.categories)) item.categories = []
       const addedItem = await ItemModel.create(item)
       return addedItem
     } catch (err) {
@@ -453,6 +456,7 @@ export class ItemService {
   static async listForPlayground(filter: {
     q?: string
     type?: string
+    category?: string
     page?: number
     limit?: number
   }) {
@@ -462,6 +466,10 @@ export class ItemService {
 
     if (filter.type && filter.type !== 'all') {
       query.type = filter.type
+    }
+
+    if (filter.category && isItemCategoryId(filter.category)) {
+      query.categories = filter.category
     }
 
     if (filter.q) {
@@ -510,6 +518,7 @@ export class ItemService {
             name: this.toLocalizedName(rest.name),
             isCurated: true,
             popularity: rest.popularity ?? 50,
+            categories: Array.isArray(rest.categories) ? rest.categories : [],
           }
         })
       )
@@ -528,6 +537,7 @@ export class ItemService {
             type: 'product',
             isCurated: false,
             popularity: rest.popularity ?? 14,
+            categories: Array.isArray(rest.categories) ? rest.categories : [],
           },
         },
         { upsert: true }
@@ -538,5 +548,77 @@ export class ItemService {
       foods: foods.length,
       products: products.length,
     }
+  }
+
+  static getCategorySort(sortBy?: string): Record<string, 1 | -1> {
+    if (sortBy === 'calories (high to low)')
+      return { 'macros.calories': -1, _id: 1 }
+    if (sortBy === 'calories (low to high)')
+      return { 'macros.calories': 1, _id: 1 }
+    if (sortBy === 'protein (high to low)')
+      return { 'macros.protein': -1, _id: 1 }
+    if (sortBy === 'protein (low to high)')
+      return { 'macros.protein': 1, _id: 1 }
+    if (sortBy === 'carbs (high to low)') return { 'macros.carbs': -1, _id: 1 }
+    if (sortBy === 'carbs (low to high)') return { 'macros.carbs': 1, _id: 1 }
+    if (sortBy === 'fat (high to low)') return { 'macros.fat': -1, _id: 1 }
+    if (sortBy === 'fat (low to high)') return { 'macros.fat': 1, _id: 1 }
+    return { popularity: -1, _id: 1 }
+  }
+
+  static async listByCategory(filter: {
+    category: string
+    txt?: string
+    sortBy?: string
+    skip?: number
+    limit?: number
+  }) {
+    if (!isItemCategoryId(filter.category)) {
+      return { items: [], nextSkip: undefined as number | undefined, total: 0 }
+    }
+
+    const skip = Math.max(0, Number(filter.skip) || 0)
+    const limit = Math.min(80, Math.max(1, Number(filter.limit) || 20))
+    const query: Record<string, unknown> = { categories: filter.category }
+
+    if (filter.txt) {
+      const term = this.escapeRegex(this.normalizeSearchTerm(filter.txt))
+      query.$or = [
+        { 'name.eng': { $regex: term, $options: 'i' } },
+        { 'name.he': { $regex: term, $options: 'i' } },
+        { 'name.default': { $regex: term, $options: 'i' } },
+        { name: { $regex: term, $options: 'i' } },
+        { searchTerms: { $regex: term, $options: 'i' } },
+      ]
+    }
+
+    const [items, total] = await Promise.all([
+      ItemModel.find(query)
+        .sort(this.getCategorySort(filter.sortBy))
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      ItemModel.countDocuments(query),
+    ])
+
+    const hasMore = skip + items.length < total
+    return {
+      items,
+      total,
+      nextSkip: hasMore ? skip + limit : undefined,
+    }
+  }
+
+  static async getCategoryCounts() {
+    const rows = await ItemModel.aggregate<{ _id: string; count: number }>([
+      { $unwind: '$categories' },
+      { $group: { _id: '$categories', count: { $sum: 1 } } },
+    ])
+
+    const counts: Record<string, number> = {}
+    for (const row of rows) {
+      if (row._id) counts[row._id] = row.count
+    }
+    return counts
   }
 }

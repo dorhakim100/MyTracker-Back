@@ -13,4 +13,5 @@ export interface Item {
   popularity?: number
   isCurated?: boolean
   searchTerms?: string[]
+  categories?: string[]
 }

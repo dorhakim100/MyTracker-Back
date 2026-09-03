@@ -262,15 +262,17 @@ export class ItemController {
   static async playgroundList(req: Request, res: Response) {
     if (!this.isPlaygroundAllowed(req, res)) return
     try {
-      const { q, type, page, limit } = req.query as {
+      const { q, type, category, page, limit } = req.query as {
         q?: string
         type?: string
+        category?: string
         page?: string
         limit?: string
       }
       const result = await ItemService.listForPlayground({
         q,
         type,
+        category,
         page: page ? Number(page) : 0,
         limit: limit ? Number(limit) : 80,
       })
@@ -321,6 +323,42 @@ export class ItemController {
     } catch (err: any) {
       logger.error('Failed to apply catalog', err)
       res.status(500).send({ err: 'Failed to apply catalog' })
+    }
+  }
+
+  static async listByCategory(req: Request, res: Response) {
+    try {
+      const { category, txt, sortBy, skip, limit } = req.query as {
+        category?: string
+        txt?: string
+        sortBy?: string
+        skip?: string
+        limit?: string
+      }
+      if (!category) {
+        return res.status(400).send({ err: 'Category is required' })
+      }
+      const result = await ItemService.listByCategory({
+        category,
+        txt,
+        sortBy,
+        skip: skip ? Number(skip) : 0,
+        limit: limit ? Number(limit) : 20,
+      })
+      res.json(result)
+    } catch (err: any) {
+      logger.error('Failed to list items by category', err)
+      res.status(500).send({ err: 'Failed to list items by category' })
+    }
+  }
+
+  static async getCategoryCounts(_req: Request, res: Response) {
+    try {
+      const counts = await ItemService.getCategoryCounts()
+      res.json(counts)
+    } catch (err: any) {
+      logger.error('Failed to get category counts', err)
+      res.status(500).send({ err: 'Failed to get category counts' })
     }
   }
 }

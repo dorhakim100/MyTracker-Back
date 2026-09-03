@@ -13,7 +13,9 @@
     "test:google-health": "ts-node src/api/health/google-health.normalize.test.ts",
     "test:health-sync-window": "ts-node src/api/health/health-sync-window.test.ts",
     "test:user-details": "ts-node src/api/user/user-details.util.test.ts",
-    "items:apply": "ts-node src/scripts/apply-item-catalog.ts"
+    "items:apply": "ts-node src/scripts/apply-item-catalog.ts",
+    "items:backfill-categories": "ts-node src/scripts/backfill-item-categories.ts",
+    "items:rename-groups-to-categories": "ts-node src/scripts/rename-item-groups-to-categories.ts"
   },
   "dependencies": {
     "@google-cloud/translate": "^9.2.0",
