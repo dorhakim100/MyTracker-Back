@@ -3,7 +3,7 @@ import { logger } from '../../services/logger.service'
 import { Item } from '@/types/Item/Item'
 import { MealService } from '../meal/meal.service'
 import { ItemName, LocalizedName } from '@/types/Item/LocalizedName'
-import { isItemCategoryId } from './item-categories'
+import { isItemCategoryId, normalizeCategories } from './item-categories'
 
 export class ItemService {
   /**
@@ -240,7 +240,7 @@ export class ItemService {
           searchTerm: normalizedTerm,
           popularity: item.popularity ?? 8,
           isCurated: false,
-          categories: Array.isArray(item.categories) ? item.categories : [],
+          categories: normalizeCategories(item.categories),
         }
       })
 
@@ -345,7 +345,7 @@ export class ItemService {
       }
       item.name = this.toLocalizedName(item.name)
       if (item.popularity == null) item.popularity = 8
-      if (!Array.isArray(item.categories)) item.categories = []
+      item.categories = normalizeCategories(item.categories)
       const addedItem = await ItemModel.create(item)
       return addedItem
     } catch (err) {
@@ -369,6 +369,9 @@ export class ItemService {
       }
       if (itemToUpdate.name !== undefined) {
         itemToUpdate.name = this.toLocalizedName(itemToUpdate.name)
+      }
+      if (itemToUpdate.categories !== undefined) {
+        itemToUpdate.categories = normalizeCategories(itemToUpdate.categories)
       }
       const item = await ItemModel.findByIdAndUpdate(itemId, itemToUpdate, {
         new: true,
@@ -500,7 +503,7 @@ export class ItemService {
     try {
       await ItemModel.collection.dropIndex('name_text')
     } catch {
-      // index may not exist after the first migration
+      // index may not exist
     }
 
     const foods = items.filter((item) => item.type === 'food')
@@ -518,7 +521,7 @@ export class ItemService {
             name: this.toLocalizedName(rest.name),
             isCurated: true,
             popularity: rest.popularity ?? 50,
-            categories: Array.isArray(rest.categories) ? rest.categories : [],
+            categories: normalizeCategories(rest.categories),
           }
         })
       )
@@ -537,7 +540,7 @@ export class ItemService {
             type: 'product',
             isCurated: false,
             popularity: rest.popularity ?? 14,
-            categories: Array.isArray(rest.categories) ? rest.categories : [],
+            categories: normalizeCategories(rest.categories),
           },
         },
         { upsert: true }

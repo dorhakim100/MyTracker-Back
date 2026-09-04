@@ -1,16 +1,16 @@
 export const ITEM_CATEGORY_IDS = [
   'proteins',
   'carbs',
-  'vegetables',
-  'fruits',
   'dairy',
-  'nutsSeeds',
-  'fatsOils',
   'prepared',
+  'fatsOils',
+  'nutsSeeds',
+  'fruits',
+  'vegetables',
   'snacks',
-  'beverages',
-  'condiments',
   'sweets',
+  'drinks',
+  'sauces',
 ] as const
 
 export type ItemCategoryId = (typeof ITEM_CATEGORY_IDS)[number]
@@ -64,15 +64,23 @@ export const ITEM_CATEGORY_LABELS: Record<
     he: 'חטיפים',
     aliases: ['snack', 'חטיף', 'חטיפים'],
   },
-  beverages: {
-    eng: 'Beverages',
+  drinks: {
+    eng: 'Drinks',
     he: 'משקאות',
-    aliases: ['drinks', 'drink', 'beverage', 'משקה', 'משקאות'],
+    aliases: ['drinks', 'beverages', 'beverage', 'drink', 'משקה', 'משקאות'],
   },
-  condiments: {
-    eng: 'Condiments',
-    he: 'רטבים ותבלינים',
-    aliases: ['condiment', 'sauce', 'רוטב', 'רטבים'],
+  sauces: {
+    eng: 'Sauces',
+    he: 'רטבים',
+    aliases: [
+      'sauces',
+      'condiments',
+      'condiment',
+      'sauce',
+      'רוטב',
+      'רטבים',
+      'תבלינים',
+    ],
   },
   sweets: {
     eng: 'Sweets',
@@ -116,10 +124,10 @@ const CURATED_CATEGORIES: Record<string, ItemCategoryId[]> = {
   'chickpeas, cooked': ['proteins'],
   'black beans, cooked': ['proteins'],
   'edamame, cooked': ['proteins'],
-  'milk, whole (3%)': ['dairy', 'beverages'],
-  'milk, skim': ['dairy', 'beverages'],
+  'milk, whole (3%)': ['dairy', 'drinks'],
+  'milk, skim': ['dairy', 'drinks'],
   'greek yogurt, plain, lowfat': ['dairy', 'proteins'],
-  'milk, 1%': ['dairy', 'beverages'],
+  'milk, 1%': ['dairy', 'drinks'],
   'greek yogurt, plain, nonfat': ['dairy', 'proteins'],
   'cheddar cheese': ['dairy', 'proteins'],
   'cottage cheese, full fat': ['dairy', 'proteins'],
@@ -131,9 +139,9 @@ const CURATED_CATEGORIES: Record<string, ItemCategoryId[]> = {
   butter: ['dairy', 'fatsOils'],
   'sour cream': ['dairy', 'fatsOils'],
   'whey protein powder': ['proteins'],
-  'almond milk, unsweetened': ['dairy', 'beverages'],
-  'oat milk, unsweetened': ['dairy', 'beverages'],
-  'soy milk, unsweetened': ['dairy', 'beverages'],
+  'almond milk, unsweetened': ['dairy', 'drinks'],
+  'oat milk, unsweetened': ['dairy', 'drinks'],
+  'soy milk, unsweetened': ['dairy', 'drinks'],
   'white rice, cooked': ['carbs'],
   'couscous, cooked': ['carbs'],
   'pasta, dry': ['carbs'],
@@ -193,7 +201,7 @@ const CURATED_CATEGORIES: Record<string, ItemCategoryId[]> = {
   'peanut butter': ['nutsSeeds', 'fatsOils'],
   cashews: ['nutsSeeds'],
   peanuts: ['nutsSeeds'],
-  tahini: ['nutsSeeds', 'condiments', 'fatsOils'],
+  tahini: ['nutsSeeds', 'sauces', 'fatsOils'],
   'chia seeds': ['nutsSeeds'],
   pistachios: ['nutsSeeds'],
   hummus: ['prepared', 'proteins'],
@@ -201,14 +209,14 @@ const CURATED_CATEGORIES: Record<string, ItemCategoryId[]> = {
   'coconut oil': ['fatsOils'],
   'avocado oil': ['fatsOils'],
   'canola oil': ['fatsOils'],
-  honey: ['condiments', 'sweets'],
-  mayonnaise: ['condiments', 'fatsOils'],
-  ketchup: ['condiments'],
-  'soy sauce': ['condiments'],
-  'coffee, black': ['beverages'],
-  water: ['beverages'],
-  'orange juice': ['beverages', 'fruits'],
-  'green tea': ['beverages'],
+  honey: ['sauces', 'sweets'],
+  mayonnaise: ['sauces', 'fatsOils'],
+  ketchup: ['sauces'],
+  'soy sauce': ['sauces'],
+  'coffee, black': ['drinks'],
+  water: ['drinks'],
+  'orange juice': ['drinks', 'fruits'],
+  'green tea': ['drinks'],
   falafel: ['prepared', 'proteins'],
   'chicken schnitzel': ['prepared', 'proteins'],
   labneh: ['dairy', 'proteins'],
@@ -499,7 +507,7 @@ const RULES: CategoryRule[] = [
     ],
   },
   {
-    category: 'condiments',
+    category: 'sauces',
     keywords: [
       'ketchup',
       'mustard',
@@ -529,7 +537,7 @@ const RULES: CategoryRule[] = [
     ],
   },
   {
-    category: 'beverages',
+    category: 'drinks',
     keywords: [
       'coffee',
       'espresso',
@@ -718,17 +726,18 @@ function includesTerm(haystack: string, term: string) {
   const needle = normalize(term)
   if (!needle) return false
   if (needle === 'חלב') return /חלב(?!ון)/.test(haystack)
-  if (/[\u0590-\u05FF]/.test(needle) || needle.includes(' ') || needle.length >= 5) {
+  if (
+    /[\u0590-\u05FF]/.test(needle) ||
+    needle.includes(' ') ||
+    needle.length >= 5
+  ) {
     return haystack.includes(needle)
   }
   const re = new RegExp(`(^|[^a-z0-9])${escapeRegex(needle)}([^a-z0-9]|$)`)
   return re.test(haystack)
 }
 
-function haystackOf(item: {
-  name?: unknown
-  searchTerms?: string[]
-}) {
+function haystackOf(item: { name?: unknown; searchTerms?: string[] }) {
   const parts: string[] = [...(item.searchTerms || [])]
   const name = item.name
   if (typeof name === 'string') parts.push(name)
@@ -764,4 +773,14 @@ export function classifyItemCategories(item: {
 
 export function isItemCategoryId(value: string): value is ItemCategoryId {
   return (ITEM_CATEGORY_IDS as readonly string[]).includes(value)
+}
+
+export function normalizeCategories(value: unknown): ItemCategoryId[] {
+  if (!Array.isArray(value)) return []
+  const next: ItemCategoryId[] = []
+  for (const entry of value) {
+    if (typeof entry !== 'string' || !isItemCategoryId(entry)) continue
+    if (!next.includes(entry)) next.push(entry)
+  }
+  return next
 }
