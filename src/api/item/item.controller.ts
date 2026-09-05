@@ -1,12 +1,13 @@
 import { Request, Response } from 'express'
 import { ItemService } from './item.service'
 import { logger } from '../../services/logger.service'
+import { AuthRequest } from '../../middleware/auth.middleware'
 
 export class ItemController {
   /**
    * Get cached items by search term
    */
-  static async getItemsBySearchTerm(req: Request, res: Response) {
+  static async getItemsBySearchTerm(req: AuthRequest, res: Response) {
     try {
       const { searchTerm } = req.query as { searchTerm: string }
 
@@ -15,7 +16,7 @@ export class ItemController {
         return res.status(400).send({ err: 'Search term is required' })
       }
 
-      const items = await ItemService.getBySearchTerm(searchTerm)
+      const items = await ItemService.getBySearchTerm(searchTerm, req.user?._id)
       res.json(items)
     } catch (err: any) {
       logger.error('Failed to get items by search term', err)
@@ -26,14 +27,17 @@ export class ItemController {
   /**
    * Check if search term has cached results
    */
-  static async hasCachedResults(req: Request, res: Response) {
+  static async hasCachedResults(req: AuthRequest, res: Response) {
     try {
       const { searchTerm } = req.query
       if (!searchTerm || typeof searchTerm !== 'string') {
         return res.status(400).send({ err: 'Search term is required' })
       }
 
-      const hasCache = await ItemService.hasCachedResults(searchTerm)
+      const hasCache = await ItemService.hasCachedResults(
+        searchTerm,
+        req.user?._id
+      )
       res.json(hasCache)
     } catch (err: any) {
       logger.error('Failed to check cached results', err)
@@ -80,6 +84,21 @@ export class ItemController {
     }
   }
 
+  static async createItem(req: AuthRequest, res: Response) {
+    try {
+      const createdBy = req.user?._id
+      if (!createdBy) {
+        return res.status(401).send({ err: 'Not Authenticated' })
+      }
+
+      const item = await ItemService.create({ ...req.body, createdBy })
+      res.json(item)
+    } catch (err: any) {
+      logger.error('Failed to create item', err)
+      res.status(500).send({ err: 'Failed to create item' })
+    }
+  }
+
   /**
    * Get item by searchId
    */
@@ -105,9 +124,9 @@ export class ItemController {
   /**
    * Query items with filters
    */
-  static async getItems(req: Request, res: Response) {
+  static async getItems(req: AuthRequest, res: Response) {
     try {
-      const items = await ItemService.query(req.query)
+      const items = await ItemService.query(req.query, req.user?._id)
       res.json(items)
     } catch (err: any) {
       logger.error('Failed to get items', err)
@@ -118,14 +137,14 @@ export class ItemController {
   /**
    * Search items by name
    */
-  static async searchItems(req: Request, res: Response) {
+  static async searchItems(req: AuthRequest, res: Response) {
     try {
       const { q } = req.query
       if (!q || typeof q !== 'string') {
         return res.status(400).send({ err: 'Query parameter is required' })
       }
 
-      const items = await ItemService.searchByName(q)
+      const items = await ItemService.searchByName(q, req.user?._id)
       res.json(items)
     } catch (err: any) {
       logger.error('Failed to search items', err)
@@ -249,8 +268,7 @@ export class ItemController {
       res.status(404).send({ err: 'Not found' })
       return false
     }
-    const expected =
-      process.env.PLAYGROUND_KEY || 'dev-playground'
+    const expected = process.env.PLAYGROUND_KEY || 'dev-playground'
     const provided = req.headers['x-playground-key']
     if (provided !== expected) {
       res.status(401).send({ err: 'Playground key required' })
@@ -326,7 +344,7 @@ export class ItemController {
     }
   }
 
-  static async listByCategory(req: Request, res: Response) {
+  static async listByCategory(req: AuthRequest, res: Response) {
     try {
       const { category, txt, sortBy, skip, limit } = req.query as {
         category?: string
@@ -338,13 +356,16 @@ export class ItemController {
       if (!category) {
         return res.status(400).send({ err: 'Category is required' })
       }
-      const result = await ItemService.listByCategory({
-        category,
-        txt,
-        sortBy,
-        skip: skip ? Number(skip) : 0,
-        limit: limit ? Number(limit) : 20,
-      })
+      const result = await ItemService.listByCategory(
+        {
+          category,
+          txt,
+          sortBy,
+          skip: skip ? Number(skip) : 0,
+          limit: limit ? Number(limit) : 20,
+        },
+        req.user?._id
+      )
       res.json(result)
     } catch (err: any) {
       logger.error('Failed to list items by category', err)
@@ -352,9 +373,9 @@ export class ItemController {
     }
   }
 
-  static async getCategoryCounts(_req: Request, res: Response) {
+  static async getCategoryCounts(req: AuthRequest, res: Response) {
     try {
-      const counts = await ItemService.getCategoryCounts()
+      const counts = await ItemService.getCategoryCounts(req.user?._id)
       res.json(counts)
     } catch (err: any) {
       logger.error('Failed to get category counts', err)

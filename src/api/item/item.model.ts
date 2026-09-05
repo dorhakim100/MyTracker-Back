@@ -16,6 +16,7 @@ export interface IItem extends mongoose.Document {
   popularity?: number
   isCurated?: boolean
   categories?: string[]
+  createdBy?: string
 }
 
 const itemSchema = new mongoose.Schema(
@@ -73,6 +74,10 @@ const itemSchema = new mongoose.Schema(
       required: false,
       default: [],
       index: true,
+    },
+    createdBy: {
+      type: String,
+      required: false,
     },
   },
   {

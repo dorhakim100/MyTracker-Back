@@ -7,13 +7,39 @@ import { isItemCategoryId, normalizeCategories } from './item-categories'
 
 export class ItemService {
   /**
+   * An item with a `createdBy` is private to that user; items without one
+   * (the shared catalog / cached search results) stay public.
+   */
+  private static getVisibilityFilter(userId?: string) {
+    if (!userId) return { createdBy: null }
+    return { $or: [{ createdBy: null }, { createdBy: userId }] }
+  }
+
+  private static withVisibility(
+    query: Record<string, unknown>,
+    userId?: string
+  ) {
+    return { $and: [query, this.getVisibilityFilter(userId)] }
+  }
+
+  static async create(
+    item: Partial<IItem> & { createdBy: string }
+  ): Promise<IItem> {
+    try {
+      const newItem = await ItemModel.create(item)
+      return newItem
+    } catch (err) {
+      logger.error('Failed to create item', err)
+      throw err
+    }
+  }
+  /**
    * Normalizes a search term for consistent caching
    */
 
-
   private static normalizeSearchTerm(term: string): string {
     if (!term) return ''
-  
+
     return term
       .toLowerCase()
       .normalize('NFKD')
@@ -67,7 +93,10 @@ export class ItemService {
   /**
    * Get cached items by search term
    */
-  static async getBySearchTerm(searchTerm: string): Promise<IItem[]> {
+  static async getBySearchTerm(
+    searchTerm: string,
+    userId?: string
+  ): Promise<IItem[]> {
     try {
       const normalizedTerm = this.normalizeSearchTerm(searchTerm)
       if (!normalizedTerm) return []
@@ -82,16 +111,21 @@ export class ItemService {
 
       const escapedVariants = allVariants.map((term) => this.escapeRegex(term))
 
-      const items = await ItemModel.find({
-        $or: escapedVariants.flatMap((term) => [
-          { 'name.eng': { $regex: term, $options: 'i' } },
-          { 'name.he': { $regex: term, $options: 'i' } },
-          { 'name.default': { $regex: term, $options: 'i' } },
-          { name: { $regex: term, $options: 'i' } },
-          { searchTerms: { $regex: term, $options: 'i' } },
-          { searchTerm: { $regex: term, $options: 'i' } },
-        ]),
-      })
+      const items = await ItemModel.find(
+        this.withVisibility(
+          {
+            $or: escapedVariants.flatMap((term) => [
+              { 'name.eng': { $regex: term, $options: 'i' } },
+              { 'name.he': { $regex: term, $options: 'i' } },
+              { 'name.default': { $regex: term, $options: 'i' } },
+              { name: { $regex: term, $options: 'i' } },
+              { searchTerms: { $regex: term, $options: 'i' } },
+              { searchTerm: { $regex: term, $options: 'i' } },
+            ]),
+          },
+          userId
+        )
+      )
         .sort({ popularity: -1, _id: 1 })
         .limit(40)
         .lean()
@@ -140,49 +174,56 @@ export class ItemService {
 
   private static getSearchVariants(term: string): string[] {
     const normalized = this.normalizeSearchTerm(term).toLowerCase().trim()
-  
+
     const variants = new Set<string>()
     variants.add(normalized)
-  
+
     const words = normalized.split(/\s+/)
     const lastWord = words[words.length - 1]
-  
+
     if (!lastWord) return [...variants]
-  
+
     // eggs -> egg
     if (lastWord.endsWith('s') && lastWord.length > 3) {
       variants.add([...words.slice(0, -1), lastWord.slice(0, -1)].join(' '))
     }
-  
+
     // egg -> eggs
     if (!lastWord.endsWith('s')) {
       variants.add([...words.slice(0, -1), `${lastWord}s`].join(' '))
     }
-  
+
     // tomatoes -> tomato
     if (lastWord.endsWith('es') && lastWord.length > 4) {
       variants.add([...words.slice(0, -1), lastWord.slice(0, -2)].join(' '))
     }
-  
+
     // berry -> berries
     if (lastWord.endsWith('y') && lastWord.length > 3) {
-      variants.add([...words.slice(0, -1), `${lastWord.slice(0, -1)}ies`].join(' '))
+      variants.add(
+        [...words.slice(0, -1), `${lastWord.slice(0, -1)}ies`].join(' ')
+      )
     }
-  
+
     // berries -> berry
     if (lastWord.endsWith('ies') && lastWord.length > 4) {
-      variants.add([...words.slice(0, -1), `${lastWord.slice(0, -3)}y`].join(' '))
+      variants.add(
+        [...words.slice(0, -1), `${lastWord.slice(0, -3)}y`].join(' ')
+      )
     }
-  
+
     return [...variants].filter(Boolean)
   }
 
   /**
    * Check if a search term has cached results
    */
-  static async hasCachedResults(searchTerm: string): Promise<boolean> {
+  static async hasCachedResults(
+    searchTerm: string,
+    userId?: string
+  ): Promise<boolean> {
     try {
-      const items = await this.getBySearchTerm(searchTerm)
+      const items = await this.getBySearchTerm(searchTerm, userId)
       return items.length > 0
     } catch (err) {
       logger.error(`Failed to check cached results for ${searchTerm}`, err)
@@ -307,9 +348,9 @@ export class ItemService {
   /**
    * Query items with filters
    */
-  static async query(filterBy = {}): Promise<IItem[]> {
+  static async query(filterBy = {}, userId?: string): Promise<IItem[]> {
     try {
-      const items = await ItemModel.find(filterBy)
+      const items = await ItemModel.find(this.withVisibility(filterBy, userId))
       return items
     } catch (err) {
       logger.error('Failed to query items', err)
@@ -320,11 +361,11 @@ export class ItemService {
   /**
    * Search items by name (text search)
    */
-  static async searchByName(query: string): Promise<IItem[]> {
+  static async searchByName(query: string, userId?: string): Promise<IItem[]> {
     try {
-      const items = await ItemModel.find({
-        $text: { $search: query },
-      })
+      const items = await ItemModel.find(
+        this.withVisibility({ $text: { $search: query } }, userId)
+      )
       return items
     } catch (err) {
       logger.error(`Failed to search items by name ${query}`, err)
@@ -569,13 +610,16 @@ export class ItemService {
     return { popularity: -1, _id: 1 }
   }
 
-  static async listByCategory(filter: {
-    category: string
-    txt?: string
-    sortBy?: string
-    skip?: number
-    limit?: number
-  }) {
+  static async listByCategory(
+    filter: {
+      category: string
+      txt?: string
+      sortBy?: string
+      skip?: number
+      limit?: number
+    },
+    userId?: string
+  ) {
     if (!isItemCategoryId(filter.category)) {
       return { items: [], nextSkip: undefined as number | undefined, total: 0 }
     }
@@ -595,13 +639,15 @@ export class ItemService {
       ]
     }
 
+    const visibleQuery = this.withVisibility(query, userId)
+
     const [items, total] = await Promise.all([
-      ItemModel.find(query)
+      ItemModel.find(visibleQuery)
         .sort(this.getCategorySort(filter.sortBy))
         .skip(skip)
         .limit(limit)
         .lean(),
-      ItemModel.countDocuments(query),
+      ItemModel.countDocuments(visibleQuery),
     ])
 
     const hasMore = skip + items.length < total
@@ -612,8 +658,9 @@ export class ItemService {
     }
   }
 
-  static async getCategoryCounts() {
+  static async getCategoryCounts(userId?: string) {
     const rows = await ItemModel.aggregate<{ _id: string; count: number }>([
+      { $match: this.getVisibilityFilter(userId) },
       { $unwind: '$categories' },
       { $group: { _id: '$categories', count: { $sum: 1 } } },
     ])

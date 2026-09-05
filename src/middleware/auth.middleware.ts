@@ -110,3 +110,35 @@ export function requireAuth(
   // }
   next()
 }
+
+/**
+ * Resolves the logged-in user when a valid token is sent, without blocking
+ * anonymous requests. Use on public read routes that show user-owned data.
+ */
+export function optionalAuth(
+  req: AuthRequest,
+  _res: Response,
+  next: NextFunction
+) {
+  const cookieToken = req.cookies?.loginToken
+  const authHeader = req.headers.authorization
+
+  const headerToken = authHeader?.startsWith('Bearer ')
+    ? authHeader.slice(7)
+    : null
+
+  const token = cookieToken || headerToken
+
+  if (token) {
+    try {
+      req.user = jwt.verify(
+        token,
+        process.env.JWT_SECRET as string
+      ) as JWTPayload
+    } catch {
+      // Invalid / expired token — continue as anonymous
+    }
+  }
+
+  next()
+}
