@@ -7,4 +7,5 @@ export interface MealItem {
   macros: Macros
   image?: string
   name?: string
+  unit?: 'g' | 'ml'
 }

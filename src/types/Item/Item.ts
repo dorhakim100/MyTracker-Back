@@ -14,4 +14,5 @@ export interface Item {
   isCurated?: boolean
   searchTerms?: string[]
   categories?: string[]
+  unit?: 'g' | 'ml'
 }

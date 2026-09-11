@@ -59,4 +59,24 @@ export class LogController {
       res.status(500).send({ err: 'Failed to delete log' })
     }
   }
+
+  static async clearMeal(req: Request, res: Response) {
+    try {
+      const userId = (req.body?.userId || req.query.userId) as string
+      const meal = (req.body?.meal || req.query.meal) as string
+      const date = (req.body?.date || req.query.date) as string
+
+      if (!userId || !meal || !date) {
+        return res
+          .status(400)
+          .send({ err: 'userId, meal and date are required' })
+      }
+
+      const day = await LogService.clearMeal({ userId, meal, date })
+      res.json(day)
+    } catch (err: any) {
+      logger.error('Failed to clear meal', err)
+      res.status(500).send({ err: 'Failed to clear meal' })
+    }
+  }
 }

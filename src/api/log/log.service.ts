@@ -1,6 +1,9 @@
+import mongoose from 'mongoose'
 import { Log, ILog } from './log.model'
+import { Day } from '../day/day.model'
+import { DayService } from '../day/day.service'
 import { logger } from '../../services/logger.service'
-import { makeId } from '../../services/utils'
+import { getDateFromISO } from '../../services/utils'
 
 export class LogService {
   static async query(filterBy = {}) {
@@ -61,6 +64,73 @@ export class LogService {
       await Log.deleteMany({ createdBy: userId })
     } catch (err) {
       logger.error(`Failed to remove all logs by user ${userId}`, err)
+      throw err
+    }
+  }
+
+  static async clearMeal(params: {
+    userId: string
+    meal: string
+    date: string
+  }) {
+    try {
+      const { userId, meal, date } = params
+      const dateFromISO = getDateFromISO(date)
+      const day = await Day.findOne({ userId, date: dateFromISO })
+
+      if (!day) {
+        return {
+          userId,
+          date: dateFromISO,
+          logs: [],
+          calories: 0,
+        }
+      }
+
+      const logObjectIds = (day.logs || [])
+        .map((id: any) => {
+          if (!id) return null
+          if (id instanceof mongoose.Types.ObjectId) return id
+          const idStr =
+            typeof id === 'string' ? id : id._id ? String(id._id) : String(id)
+          if (!mongoose.Types.ObjectId.isValid(idStr)) return null
+          return new mongoose.Types.ObjectId(idStr)
+        })
+        .filter(Boolean) as mongoose.Types.ObjectId[]
+
+      const dayLogs = await Log.find({ _id: { $in: logObjectIds } })
+      const mealKey = meal.toLowerCase()
+      const logsToRemove = dayLogs.filter(
+        (log) => (log.meal || '').toLowerCase() === mealKey
+      )
+      const remainingLogs = dayLogs.filter(
+        (log) => (log.meal || '').toLowerCase() !== mealKey
+      )
+
+      if (logsToRemove.length) {
+        await Log.deleteMany({
+          _id: { $in: logsToRemove.map((log) => log._id) },
+        })
+      }
+
+      const remainingIds = remainingLogs.map((log: ILog) => log._id?.toString())
+      const calories = remainingLogs.reduce(
+        (acc, log) => acc + (log.macros?.calories || 0),
+        0
+      )
+
+      await Day.findByIdAndUpdate(
+        day._id,
+        { logs: remainingIds, calories },
+        { new: true }
+      )
+
+      return DayService.getById((day._id as mongoose.Types.ObjectId).toString())
+    } catch (err) {
+      logger.error(
+        `Failed to clear meal ${params.meal} for user ${params.userId} on ${params.date}`,
+        err
+      )
       throw err
     }
   }

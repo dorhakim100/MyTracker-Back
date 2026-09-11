@@ -158,6 +158,7 @@ export class ItemController {
   static async addItem(req: Request, res: Response) {
     try {
       const item = req.body
+      console.log('item', item)
       delete item._id
       const addedItem = await ItemService.add(item)
       res.json(addedItem)

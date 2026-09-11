@@ -15,6 +15,7 @@ export interface ILog extends mongoose.Document {
   isFixedMenuLog?: boolean
   image?: string
   categories?: string[]
+  unit?: 'g' | 'ml'
   // imgUrl?: string
 }
 
@@ -78,6 +79,11 @@ const logSchema = new mongoose.Schema(
       type: [String],
       required: false,
       default: [],
+    },
+    unit: {
+      type: String,
+      enum: ['g', 'ml'],
+      required: false,
     },
   },
   {

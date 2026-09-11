@@ -17,6 +17,7 @@ export interface IItem extends mongoose.Document {
   isCurated?: boolean
   categories?: string[]
   createdBy?: string
+  unit?: 'g' | 'ml'
 }
 
 const itemSchema = new mongoose.Schema(
@@ -77,6 +78,11 @@ const itemSchema = new mongoose.Schema(
     },
     createdBy: {
       type: String,
+      required: false,
+    },
+    unit: {
+      type: String,
+      enum: ['g', 'ml'],
       required: false,
     },
   },

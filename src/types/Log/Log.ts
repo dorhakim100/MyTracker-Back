@@ -11,4 +11,5 @@ export interface Log {
   servingSize?: number
   numberOfServings?: number
   source?: string
+  unit?: 'g' | 'ml'
 }
