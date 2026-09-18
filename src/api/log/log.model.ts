@@ -16,6 +16,7 @@ export interface ILog extends mongoose.Document {
   image?: string
   categories?: string[]
   unit?: 'g' | 'ml'
+  aiPlate?: boolean
   // imgUrl?: string
 }
 
@@ -84,6 +85,10 @@ const logSchema = new mongoose.Schema(
       type: String,
       enum: ['g', 'ml'],
       required: false,
+    },
+    aiPlate: {
+      type: Boolean,
+      default: false,
     },
   },
   {

@@ -27,6 +27,7 @@ import { itemRoutes } from './api/item/item.routes'
 import { exerciseRoutes } from './api/exercise/exercise.routes'
 import { chatGPTRoutes } from './api/chatGPT/gpt.routes'
 import { bodyFatRoutes } from './api/body-fat/body-fat.routes'
+import { aiLogRoutes } from './api/ai-log/ai-log.routes'
 import { googleHealthRoutes } from './api/health/google-health.routes'
 import { messageRoutes } from './api/message/message.routes'
 
@@ -34,6 +35,7 @@ import { setupSocketAPI } from './services/socket/socket.service'
 import { setupAsyncLocalStorage } from './middleware/setupAls.middleware'
 import { logger } from './services/logger.service'
 import { startBodyFatCleanupCron } from './jobs/body-fat-cleanup.cron'
+import { startAiPlateCleanupCron } from './jobs/ai-plate-cleanup.cron'
 import { startGoogleHealthSnapshotCron } from './jobs/google-health-snapshot.cron'
 
 const app = express()
@@ -128,6 +130,7 @@ app.use('/api/item', itemRoutes)
 app.use('/api/exercise', exerciseRoutes)
 app.use('/api/chatgpt', chatGPTRoutes)
 app.use('/api/body-fat', bodyFatRoutes)
+app.use('/api/ai-log', aiLogRoutes)
 app.use('/api/health/google', googleHealthRoutes)
 app.use('/api/message', messageRoutes)
 
@@ -161,6 +164,7 @@ const port = process.env.PORT || 3030
 
 connectDB().then(() => {
   startBodyFatCleanupCron()
+  startAiPlateCleanupCron()
   startGoogleHealthSnapshotCron()
 
   server.listen(port, () => {
