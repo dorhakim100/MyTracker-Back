@@ -6,4 +6,7 @@ export interface ExerciseInstructions {
   sets: Set[]
   notes: ExpectedActual<string>
   restingTime: number
+  name?: string
+  image?: string
+  withoutExpected?: boolean
 }

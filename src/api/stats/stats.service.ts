@@ -122,6 +122,15 @@ export class StatsService {
         ...new Set(sessionSets.map((set) => set.exerciseId)),
       ]
 
+      const skipAccuracyIds = new Set(
+        (instructions?.exercises || [])
+          .filter((exercise) => exercise.withoutExpected)
+          .map((exercise) => exercise.exerciseId)
+      )
+      const accuracyDoneSets = doneSets.filter(
+        (set) => !skipAccuracyIds.has(set.exerciseId)
+      )
+
       const historyByExercise = await this.historyByExercise(
         session.userId,
         exerciseIds
@@ -138,7 +147,7 @@ export class StatsService {
         )
         const instructionEx = instructions?.exercises?.find(
           (exercise) => exercise.exerciseId === exerciseId
-        ) as { name?: string; image?: string } | undefined
+        )
         const name = workoutEx?.name || instructionEx?.name || exerciseId
         const image = workoutEx?.image || instructionEx?.image
 
@@ -147,7 +156,9 @@ export class StatsService {
           name,
           image,
           actualRpe: average(exerciseDone.map(setActualRpe)),
-          accuracy: average(exerciseDone.map(setAccuracy)),
+          accuracy: skipAccuracyIds.has(exerciseId)
+            ? null
+            : average(exerciseDone.map(setAccuracy)),
           prs: this.prsForExercise(
             exerciseId,
             name,
@@ -168,7 +179,7 @@ export class StatsService {
       return {
         durationMs: stats ? durationMs(stats) : 0,
         actualRpe: average(doneSets.map(setActualRpe)),
-        accuracy: average(doneSets.map(setAccuracy)),
+        accuracy: average(accuracyDoneSets.map(setAccuracy)),
         volumeActual,
         volumePlanned,
         setsDone: doneSets.length,
