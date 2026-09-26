@@ -118,8 +118,17 @@ export class StatsService {
         ? await Instructions.findById(session.instructionsId).lean()
         : null
 
-      const exerciseIds = [
+      const loggedIds = [
         ...new Set(sessionSets.map((set) => set.exerciseId)),
+      ]
+      const loggedIdSet = new Set(loggedIds)
+      const instructionIds = (instructions?.exercises || []).map(
+        (exercise) => exercise.exerciseId
+      )
+      const instructionIdSet = new Set(instructionIds)
+      const exerciseIds = [
+        ...instructionIds.filter((id) => loggedIdSet.has(id)),
+        ...loggedIds.filter((id) => !instructionIdSet.has(id)),
       ]
 
       const skipAccuracyIds = new Set(
