@@ -51,6 +51,33 @@ export class SessionController {
     }
   }
 
+  static async listByWorkoutWeek(req: Request, res: Response) {
+    try {
+      const { workoutId } = req.params
+      const { userId, weekNumber } = req.query as {
+        userId?: string
+        weekNumber?: string
+      }
+      const week = Number(weekNumber)
+
+      if (!userId || !weekNumber || Number.isNaN(week)) {
+        return res
+          .status(400)
+          .send({ err: 'userId and weekNumber are required' })
+      }
+
+      const sessions = await SessionService.listByWorkoutWeek(
+        userId,
+        workoutId,
+        week
+      )
+      res.json(sessions)
+    } catch (err: any) {
+      logger.error('Failed to list sessions by workout week', err)
+      res.status(500).send({ err: 'Failed to list sessions by workout week' })
+    }
+  }
+
   static async listByUser(req: Request, res: Response) {
     try {
       const { userId } = req.params

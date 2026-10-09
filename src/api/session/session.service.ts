@@ -240,6 +240,38 @@ export class SessionService {
     }
   }
 
+  static async listByWorkoutWeek(
+    userId: string,
+    workoutId: string,
+    weekNumber: number
+  ): Promise<ISession[]> {
+    try {
+      const sessions = await Session.aggregate([
+        { $match: { userId, workoutId } },
+        ...this.getInstructionsLookupPipeline(),
+        {
+          $match: {
+            'instructions.weekNumber': weekNumber,
+            $or: [
+              { statsId: { $nin: [null, ''] } },
+              { 'instructions.isFinished': true },
+            ],
+          },
+        },
+        ...this.getCommonProjection(),
+        { $sort: { date: -1, createdAt: -1 } },
+      ])
+
+      return sessions
+    } catch (err) {
+      logger.error(
+        `SessionService.listByWorkoutWeek failed for workout ${workoutId} week ${weekNumber}`,
+        err
+      )
+      throw err
+    }
+  }
+
   static async listByUser(
     userId: string,
     limit = 30,

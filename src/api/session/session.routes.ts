@@ -5,6 +5,11 @@ import { requireAuth } from '../../middleware/auth.middleware'
 const router = Router()
 
 router.get('/', requireAuth, SessionController.get)
+router.get(
+  '/workout/:workoutId',
+  requireAuth,
+  SessionController.listByWorkoutWeek
+)
 router.put('/play/empty', requireAuth, SessionController.playEmptyWorkout)
 router.put('/play/:id', requireAuth, SessionController.playWorkout)
 router.post('/', requireAuth, SessionController.add)
