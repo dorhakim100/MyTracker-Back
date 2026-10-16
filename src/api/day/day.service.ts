@@ -3,6 +3,7 @@ import mongoose from 'mongoose'
 import { logger } from '../../services/logger.service'
 import { LoggedToday } from '@/types/LoggedToday/LoggedToday'
 import { getDateFromISO } from '../../services/utils'
+import { User } from '../user/user.model'
 
 export class DayService {
   static async upsertFromLoggedToday(params: {
@@ -177,6 +178,14 @@ export class DayService {
         { $addFields: { weight: { $arrayElemAt: ['$weightArray', 0] } } },
         { $project: { logObjectIds: 0, weightArray: 0 } },
       ])
+
+      const today = getDateFromISO(new Date().toISOString())
+      if (day && dateFromISO === today) {
+        await User.updateOne(
+          { _id: userId, loggedToday: { $ne: String(day._id) } },
+          { $set: { loggedToday: String(day._id) } }
+        )
+      }
 
       return day || null
     } catch (err) {

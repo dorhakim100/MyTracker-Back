@@ -15,6 +15,8 @@ import { LogService } from '../log/log.service'
 import { WeightService } from '../weight/weight.service'
 import { TrainerRequestService } from '../trainer-request/trainer-request.service'
 import { WorkoutService } from '../workout/workout.service'
+import { DayService } from '../day/day.service'
+import { getDateFromISO } from '../../services/utils'
 
 export class UserService {
   static async query(filterBy: { txt?: string; searchingUserId?: string }) {
@@ -43,6 +45,9 @@ export class UserService {
 
   static async getById(userId: string) {
     try {
+      const today = getDateFromISO(new Date().toISOString())
+      await DayService.getByUserAndDate(userId, today)
+
       const [user] = await User.aggregate([
         // 1) Find the user
         { $match: { _id: new mongoose.Types.ObjectId(userId) } },
