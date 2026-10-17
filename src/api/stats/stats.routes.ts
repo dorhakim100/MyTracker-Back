@@ -11,5 +11,7 @@ router.post(
 )
 router.post('/session/:sessionId/finish', protect, StatsController.finish)
 router.get('/session/:sessionId', protect, StatsController.getRecap)
+router.get('/week', protect, StatsController.getWeek)
+router.get('/distribution', protect, StatsController.getDistribution)
 
 export const statsRoutes = router
