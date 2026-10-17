@@ -7,7 +7,11 @@ import {
   previousDatesFor,
   sessionIsraelDate,
 } from '../../utils/israel-date.util'
-import { chartGroupsForExercise, MUSCLE_GROUP_IDS, MuscleGroupId } from './muscle-map'
+import {
+  chartGroupsForExercise,
+  MUSCLE_GROUP_IDS,
+  MuscleGroupId,
+} from './muscle-map'
 import { asId, sessionsForUser, workoutsByIds } from './stats.sessions'
 
 interface ExerciseRow {
@@ -31,7 +35,10 @@ interface GroupBucket {
   exercises: Map<string, ExerciseRow>
 }
 
-function setVolume(set: { weight?: { actual?: number }; reps?: { actual?: number } }) {
+function setVolume(set: {
+  weight?: { actual?: number }
+  reps?: { actual?: number }
+}) {
   return (set.weight?.actual ?? 0) * (set.reps?.actual ?? 0)
 }
 
@@ -69,15 +76,23 @@ function publish(groups: GroupBucket[], withLists: boolean) {
     routineCount: group.routines.size,
     exerciseCount: group.exercises.size,
     routines: withLists
-      ? [...group.routines.values()].sort((a, b) => a.name.localeCompare(b.name))
+      ? [...group.routines.values()].sort(
+          (a, b) => a?.name?.localeCompare(b?.name) ?? 0
+        )
       : [],
     exercises: withLists
-      ? [...group.exercises.values()].sort((a, b) => b.sets - a.sets || a.name.localeCompare(b.name))
+      ? [...group.exercises.values()].sort(
+          (a, b) => b.sets - a.sets || a.name.localeCompare(b.name)
+        )
       : [],
   }))
 }
 
-async function aggregate(forUserId: string, dates: string[] | null, withLists: boolean) {
+async function aggregate(
+  forUserId: string,
+  dates: string[] | null,
+  withLists: boolean
+) {
   const today = israelToday()
   const sessions = (await sessionsForUser(forUserId, dates)).filter(
     (session) => sessionIsraelDate(session.date || '') <= today
@@ -87,19 +102,25 @@ async function aggregate(forUserId: string, dates: string[] | null, withLists: b
     ? await SetModel.find({ sessionId: { $in: sessionIds }, isDone: true })
     : []
 
-  const exerciseIds = [...new Set(sets.map((set) => set.exerciseId).filter(Boolean))]
+  const exerciseIds = [
+    ...new Set(sets.map((set) => set.exerciseId).filter(Boolean)),
+  ]
   const catalog = exerciseIds.length
     ? await ExerciseModel.find({ exerciseId: { $in: exerciseIds } }).select(
         'exerciseId name image mainMuscles secondaryMuscles'
       )
     : []
-  const catalogById = new Map(catalog.map((exercise) => [exercise.exerciseId, exercise]))
+  const catalogById = new Map(
+    catalog.map((exercise) => [exercise.exerciseId, exercise])
+  )
 
   const workoutIds = sessions
     .map((session) => session.workoutId)
     .filter((id): id is string => Boolean(id))
   const workouts = await workoutsByIds(workoutIds)
-  const sessionById = new Map(sessions.map((session) => [asId(session._id), session]))
+  const sessionById = new Map(
+    sessions.map((session) => [asId(session._id), session])
+  )
 
   const groups = emptyGroups()
   const groupById = new Map(groups.map((group) => [group.id, group]))
@@ -119,7 +140,9 @@ async function aggregate(forUserId: string, dates: string[] | null, withLists: b
 
     const volume = setVolume(set)
     const session = sessionById.get(set.sessionId)
-    const workout = session?.workoutId ? workouts.get(session.workoutId) : undefined
+    const workout = session?.workoutId
+      ? workouts.get(session.workoutId)
+      : undefined
     const routine =
       workout && !workout.isEmpty
         ? { id: session?.workoutId || '', name: workout.name }
@@ -154,7 +177,9 @@ async function aggregate(forUserId: string, dates: string[] | null, withLists: b
       routineCount: total.routines.size,
       exerciseCount: total.exercises.size,
       routines: withLists
-        ? [...total.routines.values()].sort((a, b) => a.name.localeCompare(b.name))
+        ? [...total.routines.values()].sort(
+            (a, b) => a?.name?.localeCompare(b?.name) ?? 0
+          )
         : [],
       exercises: withLists
         ? [...total.exercises.values()].sort(
@@ -165,9 +190,7 @@ async function aggregate(forUserId: string, dates: string[] | null, withLists: b
   }
 }
 
-function numbersOnly(
-  summary: Awaited<ReturnType<typeof aggregate>>
-) {
+function numbersOnly(summary: Awaited<ReturnType<typeof aggregate>>) {
   return {
     groups: summary.groups.map((group) => ({
       id: group.id,
