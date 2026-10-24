@@ -64,7 +64,8 @@ function parseGeminiEstimate(raw: RawGeminiEstimate): BodyFatGeminiResult {
 export class BodyFatGeminiService {
   static async estimateFromImageUrl(
     imageUrl: string,
-    weightKg: number
+    weightKg: number,
+    measurements?: Record<string, number>
   ): Promise<BodyFatGeminiResult> {
     if (!GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY is not configured')
@@ -82,7 +83,7 @@ export class BodyFatGeminiService {
     })
 
     const result = await model.generateContent([
-      { text: getPrompt(weightKg) },
+      { text: getPrompt(weightKg, measurements) },
       {
         inlineData: {
           mimeType: imageData.mimeType,

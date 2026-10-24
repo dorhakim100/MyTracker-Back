@@ -1,10 +1,14 @@
 import { BodyFatEstimate, IBodyFatEstimate } from './body-fat.model'
 import { BodyFatGeminiService } from './gemini/body-fat.gemini'
 import { logger } from '../../services/logger.service'
-import { CloudinaryMediaService } from '../../services/cloudinary/cloudinary.service'
 
 export class BodyFatService {
-  static async estimate(userId: string, imageUrl: string, weightKg: number) {
+  static async estimate(
+    userId: string,
+    imageUrl: string,
+    weightKg: number,
+    measurements?: Record<string, number>
+  ) {
     if (!userId) {
       throw new Error('userId is required')
     }
@@ -17,10 +21,10 @@ export class BodyFatService {
     try {
       geminiResult = await BodyFatGeminiService.estimateFromImageUrl(
         imageUrl,
-        weightKg
+        weightKg,
+        measurements
       )
     } catch (err) {
-      await CloudinaryMediaService.destroyImagesByDeliveryUrls([imageUrl])
       logger.error('BodyFatGeminiService.estimateFromImageUrl failed', err)
       throw new Error('Failed to analyze image')
     }

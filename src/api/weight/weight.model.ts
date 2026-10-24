@@ -2,7 +2,16 @@ import mongoose from 'mongoose'
 
 export interface IWeight extends mongoose.Document {
   userId: string
-  kg: number
+  kg?: number
+  waistCm?: number
+  bodyFat?: number
+  neckCm?: number
+  chestCm?: number
+  armsCm?: number
+  hipsCm?: number
+  thighCm?: number
+  calfCm?: number
+  imageUrl?: string
   createdAt: number
 }
 
@@ -13,10 +22,16 @@ const weightSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    kg: {
-      type: Number,
-      required: true,
-    },
+    kg: { type: Number },
+    waistCm: { type: Number },
+    bodyFat: { type: Number },
+    neckCm: { type: Number },
+    chestCm: { type: Number },
+    armsCm: { type: Number },
+    hipsCm: { type: Number },
+    thighCm: { type: Number },
+    calfCm: { type: Number },
+    imageUrl: { type: String },
     createdAt: {
       type: Number,
       required: true,

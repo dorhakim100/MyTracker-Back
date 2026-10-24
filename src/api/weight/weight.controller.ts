@@ -2,17 +2,32 @@ import { Request, Response } from 'express'
 import { WeightService } from './weight.service'
 import { logger } from '../../services/logger.service'
 
+function readPageCount(value: string | undefined) {
+  if (!value) return undefined
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed <= 0) return undefined
+  return parsed
+}
+
 export class WeightController {
   static async getWeightsByUser(req: Request, res: Response) {
     try {
-      const { userId, fromDate, toDate } = req.query as {
+      const { userId, fromDate, toDate, skip, limit } = req.query as {
         userId: string
         fromDate: string | null
         toDate: string | null
+        skip?: string
+        limit?: string
       }
 
       if (userId) {
-        const weights = await WeightService.listByUser(userId, fromDate, toDate)
+        const weights = await WeightService.listByUser(
+          userId,
+          fromDate,
+          toDate,
+          readPageCount(skip),
+          readPageCount(limit)
+        )
         return res.json(weights)
       }
       const weights = await WeightService.query(req.query as any)

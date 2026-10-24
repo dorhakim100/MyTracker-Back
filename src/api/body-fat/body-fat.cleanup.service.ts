@@ -1,4 +1,5 @@
 import { BodyFatEstimate } from './body-fat.model'
+import { Weight } from '../weight/weight.model'
 import { CloudinaryMediaService } from '../../services/cloudinary/cloudinary.service'
 import { logger } from '../../services/logger.service'
 
@@ -27,8 +28,19 @@ export class BodyFatCleanupService {
       `BodyFatCleanupService: starting purge (${estimates.length} estimates, ${imageUrls.length} unique image URLs)`
     )
 
+    const savedPhotos = await Weight.find(
+      { imageUrl: { $exists: true, $nin: [null, ''] } },
+      { imageUrl: 1 }
+    ).lean()
+    const kept = new Set(
+      savedPhotos
+        .map((doc) => doc.imageUrl)
+        .filter((url): url is string => typeof url === 'string' && url.length > 0)
+    )
+    const urlsToDelete = imageUrls.filter((url) => !kept.has(url))
+
     const cloudinaryResult =
-      await CloudinaryMediaService.destroyImagesByDeliveryUrls(imageUrls)
+      await CloudinaryMediaService.destroyImagesByDeliveryUrls(urlsToDelete)
 
     const mongoResult = await BodyFatEstimate.deleteMany({})
 

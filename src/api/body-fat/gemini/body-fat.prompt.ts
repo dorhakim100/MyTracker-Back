@@ -1,4 +1,8 @@
-export const getPrompt = (weightKg: number) => `You are assisting a fitness tracking app. The user uploaded a photo of their body for a rough visual body-fat estimate.
+export const getPrompt = (
+  weightKg: number,
+  measurements?: Record<string, number>
+) => {
+  const prompt = `You are assisting a fitness tracking app. The user uploaded a photo of their body for a rough visual body-fat estimate.
 weightKg: ${weightKg} kg.
 
 Rules:
@@ -8,3 +12,7 @@ Rules:
 - note must be 1-3 short sentences: describe the physique.
 - Do not identify the person. Do not comment on attractiveness.
 - Typical adult ranges only; keep minPercent >= 3 and maxPercent <= 60 unless clearly unreasonable, explain in note the physique.`
+
+  if (!measurements || !Object.keys(measurements).length) return prompt
+  return `${prompt}\nMeasurements in cm, use them if present: ${JSON.stringify(measurements)}`
+}
