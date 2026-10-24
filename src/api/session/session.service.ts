@@ -8,7 +8,32 @@ import { Set } from '@/types/Exercise/Set'
 import { WorkoutService } from '../workout/workout.service'
 
 export class SessionService {
-  private static getWorkoutLookupPipeline() {
+  private static getWorkoutLookupPipeline(includeInstructionExercises = false) {
+    const workoutLookup = includeInstructionExercises
+      ? {
+          $lookup: {
+            from: 'workouts',
+            let: { workoutObjectId: '$workoutObjectId' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: { $eq: ['$_id', '$$workoutObjectId'] },
+                },
+              },
+              ...WorkoutService.instructionExercisesPipeline(),
+            ],
+            as: 'workout',
+          },
+        }
+      : {
+          $lookup: {
+            from: 'workouts',
+            localField: 'workoutObjectId',
+            foreignField: '_id',
+            as: 'workout',
+          },
+        }
+
     return [
       {
         $addFields: {
@@ -21,14 +46,7 @@ export class SessionService {
           },
         },
       },
-      {
-        $lookup: {
-          from: 'workouts',
-          localField: 'workoutObjectId',
-          foreignField: '_id',
-          as: 'workout',
-        },
-      },
+      workoutLookup,
       {
         $addFields: {
           workout: { $arrayElemAt: ['$workout', 0] },
@@ -82,7 +100,7 @@ export class SessionService {
     try {
       const session = await Session.aggregate([
         { $match: { _id: new mongoose.Types.ObjectId(sessionId) } },
-        ...this.getWorkoutLookupPipeline(),
+        ...this.getWorkoutLookupPipeline(true),
         ...this.getInstructionsLookupPipeline(),
         ...this.getCommonProjection(),
       ])
@@ -201,7 +219,7 @@ export class SessionService {
 
       const sessions = await Session.aggregate([
         { $match: { userId, date: dateFromISO } },
-        ...this.getWorkoutLookupPipeline(),
+        ...this.getWorkoutLookupPipeline(true),
         ...this.getInstructionsLookupPipeline(),
         ...this.getCommonProjection(),
         { $sort: { createdAt: -1 } },

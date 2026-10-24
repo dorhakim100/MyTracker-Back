@@ -105,7 +105,9 @@ export class WorkoutService {
     try {
       const addedWorkout = await Workout.create(workout)
       await this.syncActiveWorkoutsCount(addedWorkout.forUserId)
-      return addedWorkout
+      return (
+        (await this.getById(String(addedWorkout._id))) || addedWorkout
+      )
     } catch (err) {
       logger.error('Failed to add workout', err)
       throw err
@@ -122,7 +124,8 @@ export class WorkoutService {
         }
       )
       await this.syncActiveWorkoutsCount(workout?.forUserId)
-      return workout
+      if (!workout) return null
+      return (await this.getById(workoutId)) || workout
     } catch (err) {
       logger.error(`Failed to update workout ${workoutId}`, err)
       throw err
@@ -284,10 +287,139 @@ export class WorkoutService {
         },
       },
       {
+        $addFields: {
+          instructionExerciseIds: this.exerciseIdSet('$instructions'),
+        },
+      },
+      ...this.missingInstructionExercisesLookup(),
+      {
         $project: {
           workoutIdString: 0,
           instructions: 0,
           doneExercises: 0,
+        },
+      },
+    ]
+  }
+
+  static instructionExercisesPipeline() {
+    return [
+      {
+        $lookup: {
+          from: 'instructions',
+          let: { workoutId: { $toString: '$_id' } },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ['$workoutId', '$$workoutId'] },
+              },
+            },
+            { $project: { _id: 0, exercises: 1 } },
+          ],
+          as: 'instructionDocs',
+        },
+      },
+      {
+        $addFields: {
+          instructionExerciseIds: this.exerciseIdSet('$instructionDocs'),
+        },
+      },
+      ...this.missingInstructionExercisesLookup(),
+      {
+        $project: {
+          instructionDocs: 0,
+        },
+      },
+    ]
+  }
+
+  private static exerciseIdSet(instructionsField: string) {
+    return {
+      $filter: {
+        input: {
+          $setUnion: [
+            {
+              $reduce: {
+                input: { $ifNull: [instructionsField, []] },
+                initialValue: [],
+                in: {
+                  $concatArrays: [
+                    '$$value',
+                    {
+                      $map: {
+                        input: { $ifNull: ['$$this.exercises', []] },
+                        as: 'exercise',
+                        in: '$$exercise.exerciseId',
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+            [],
+          ],
+        },
+        as: 'id',
+        cond: {
+          $and: [
+            { $eq: [{ $type: '$$id' }, 'string'] },
+            { $ne: ['$$id', ''] },
+          ],
+        },
+      },
+    }
+  }
+
+  private static missingInstructionExercisesLookup() {
+    return [
+      {
+        $lookup: {
+          from: 'exercises',
+          let: {
+            exerciseIds: {
+              $setDifference: [
+                { $ifNull: ['$instructionExerciseIds', []] },
+                {
+                  $map: {
+                    input: { $ifNull: ['$exercises', []] },
+                    as: 'exercise',
+                    in: '$$exercise.exerciseId',
+                  },
+                },
+              ],
+            },
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ['$exerciseId', { $ifNull: ['$$exerciseIds', []] }],
+                },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                name: 1,
+                image: 1,
+                gifUrl: 1,
+                exerciseId: 1,
+                muscleGroups: 1,
+                mainMuscles: 1,
+                secondaryMuscles: 1,
+                equipments: {
+                  $cond: {
+                    if: {
+                      $gt: [{ $size: { $ifNull: ['$equipments', []] } }, 0],
+                    },
+                    then: '$equipments',
+                    else: { $ifNull: ['$equipment', []] },
+                  },
+                },
+              },
+            },
+          ],
+          as: 'instructionExercises',
         },
       },
     ]
