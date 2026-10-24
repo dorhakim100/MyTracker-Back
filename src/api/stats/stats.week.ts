@@ -11,8 +11,8 @@ import {
 import {
   asId,
   finishedInstructionIds,
-  isActiveRoutine,
   isFinishedSession,
+  isNonEmptyRoutine,
   sessionsForUser,
   workoutsByIds,
 } from './stats.sessions'
@@ -175,7 +175,7 @@ export async function buildWeekSummary(forUserId: string, mode: WeekMode) {
   const counted = sessions.filter(
     (session) =>
       isFinishedSession(session, finished) &&
-      isActiveRoutine(session.workoutId, workouts)
+      isNonEmptyRoutine(session.workoutId, workouts)
   )
   const marked = new Set(counted.map((session) => sessionIsraelDate(session.date)))
 

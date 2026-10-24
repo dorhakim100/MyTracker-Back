@@ -66,11 +66,11 @@ export function isFinishedSession(
   return finishedInstructions.has(session.instructionsId)
 }
 
-export function isActiveRoutine(
+export function isNonEmptyRoutine(
   workoutId: string | null | undefined,
-  workouts: Map<string, { isActive: boolean; isEmpty?: boolean }>
+  workouts: Map<string, { isEmpty?: boolean }>
 ) {
   if (!workoutId) return false
   const workout = workouts.get(workoutId)
-  return Boolean(workout && workout.isActive && !workout.isEmpty)
+  return Boolean(workout && !workout.isEmpty)
 }
