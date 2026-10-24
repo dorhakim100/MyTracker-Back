@@ -2,6 +2,7 @@ import { Set, ISet } from './set.model'
 import { logger } from '../../services/logger.service'
 import mongoose from 'mongoose'
 import { SetFilter } from '@/types/Exercise/Set'
+import { aggregateVolume } from './set.volume'
 
 export class SetService {
   /**
@@ -42,7 +43,7 @@ export class SetService {
   static async query(filterBy: SetFilter = {}) {
     try {
       logger.info('filterBy', filterBy)
-      const { from: fromRaw, to: toRaw, skip: skipRaw, limit: limitRaw, ...rest } = filterBy
+      const { from: fromRaw, to: toRaw, skip: skipRaw, limit: limitRaw, calculation, ...rest } = filterBy
       const from = fromRaw ? new Date(fromRaw) : undefined
       const skip = Number(skipRaw) || 0
       const limit = Number(limitRaw) || 0
@@ -54,10 +55,22 @@ export class SetService {
       let query = Set.find(criteria)
       query = query.sort({ createdAt: -1, setNumber: 1 })
 
-      if (skip > 0) query = query.skip(skip)
-      if (limit > 0) query = query.limit(limit)
+      const isVolume =
+        calculation === 'daily_volume' || calculation === 'weekly_volume'
+      if (!isVolume && skip > 0) query = query.skip(skip)
+      if (!isVolume && limit > 0) query = query.limit(limit)
 
       const sets = await query
+      if (isVolume) {
+        return aggregateVolume(
+          sets.map((set) => ({
+            createdAt: set.get('createdAt') as Date | undefined,
+            weight: set.weight,
+            reps: set.reps,
+          })),
+          calculation
+        )
+      }
       return sets
     } catch (err) {
       logger.error('Failed to query sets', err)

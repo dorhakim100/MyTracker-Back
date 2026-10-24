@@ -17,5 +17,6 @@ export interface SetFilter {
   to?: Date
   skip?: number
   limit?: number
+  calculation?: 'daily_volume' | 'weekly_volume'
 }
 
