@@ -6,6 +6,7 @@ export interface Set {
   rpe?: ExpectedActual<number>
   rir?: ExpectedActual<number>
   isDone: boolean
+  isDuringWorkout?: boolean
 }
 
 export interface SetFilter {

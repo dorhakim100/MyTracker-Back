@@ -399,6 +399,7 @@ export class SessionService {
           weight: set.weight,
           reps: set.reps,
           isDone: set.isDone,
+          ...(set.isDuringWorkout ? { isDuringWorkout: true } : {}),
         }
 
         // Only include RPE or RIR if they have actual values, but not both
