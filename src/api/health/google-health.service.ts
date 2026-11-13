@@ -39,6 +39,20 @@ export class GoogleHealthService {
     }
   }
 
+  static async disconnect(userId: string): Promise<GoogleHealthStatusResponse> {
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $unset: { googleRefreshToken: 1, googleHealthConnectedAt: 1 } },
+      { new: true }
+    ).select('email')
+
+    return {
+      connected: false,
+      googleEmail: user?.email ?? null,
+      provider: null,
+    }
+  }
+
   static async getTodayActivitySummary(
     userId: string
   ): Promise<TodayActivitySummaryResponse> {

@@ -37,6 +37,21 @@ export class GoogleHealthController {
     }
   }
 
+  static async disconnect(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.body?.userId as string
+      if (!userId) {
+        return res.status(400).send({ err: 'Missing userId' })
+      }
+
+      const status = await GoogleHealthService.disconnect(userId)
+      return res.json(status)
+    } catch (err) {
+      logger.error('Failed to disconnect Google Health', err)
+      return res.status(500).send({ err: 'Failed to disconnect Google Health' })
+    }
+  }
+
   static async getSnapshot(req: AuthRequest, res: Response) {
     try {
       const userId = req.query.userId as string
