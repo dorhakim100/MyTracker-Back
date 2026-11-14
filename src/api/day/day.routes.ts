@@ -1,14 +1,29 @@
 import { Router } from 'express'
 import { DayController } from './day.controller'
-import { protect, requireAuth } from '../../middleware/auth.middleware'
+import {
+  requireDocAccess,
+  requireUserAccess,
+} from '../../middleware/user-access.middleware'
+import { Day } from './day.model'
 
 const router = Router()
 
-router.get('/', requireAuth, DayController.get)
-router.post('/', requireAuth, DayController.upsert)
-router.get('/:id', requireAuth, DayController.getById)
-router.put('/:id', requireAuth, DayController.update)
-router.get('/user/:userId', requireAuth, DayController.listByUser)
-router.get('/by-date/:userId', requireAuth, DayController.getByDate)
+const queryUser = requireUserAccess([
+  { from: 'query', name: 'userId', required: true },
+])
+const bodyUser = requireUserAccess([
+  { from: 'body', name: 'userId', required: true },
+])
+const paramUser = requireUserAccess([
+  { from: 'params', name: 'userId', required: true },
+])
+const ownDay = requireDocAccess(Day, 'userId')
+
+router.get('/', queryUser, DayController.get)
+router.post('/', bodyUser, DayController.upsert)
+router.get('/:id', ownDay, DayController.getById)
+router.put('/:id', ownDay, requireUserAccess([{ from: 'body', name: 'userId' }]), DayController.update)
+router.get('/user/:userId', paramUser, DayController.listByUser)
+router.get('/by-date/:userId', paramUser, DayController.getByDate)
 
 export const dayRoutes = router

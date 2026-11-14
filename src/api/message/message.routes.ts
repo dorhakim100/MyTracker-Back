@@ -1,14 +1,30 @@
 import { Router } from 'express'
 import { MessageController } from './message.controller'
-import { protect } from '../../middleware/auth.middleware'
+import {
+  requireDocAccess,
+  requireLogin,
+  requireRelatedAccess,
+  requireUserAccess,
+} from '../../middleware/user-access.middleware'
+import { Message } from './message.model'
+import { Workout } from '../workout/workout.model'
 
 const router = Router()
 
-router.get('/', protect, MessageController.list)
-router.get('/unread', protect, MessageController.unread)
-router.post('/', protect, MessageController.add)
-router.put('/read', protect, MessageController.markRead)
-router.put('/:id', protect, MessageController.update)
-router.delete('/:id', protect, MessageController.remove)
+const ownWorkoutQuery = requireDocAccess(Workout, 'forUserId', {
+  query: 'workoutId',
+})
+const ownWorkoutBody = requireDocAccess(Workout, 'forUserId', {
+  body: 'workoutId',
+})
+const ownMessage = requireRelatedAccess(Message, 'workoutId', Workout, 'forUserId')
+const workoutIfSent = requireUserAccess([{ from: 'body', name: 'workoutId' }])
+
+router.get('/', ownWorkoutQuery, MessageController.list)
+router.get('/unread', requireLogin, MessageController.unread)
+router.post('/', ownWorkoutBody, MessageController.add)
+router.put('/read', ownWorkoutBody, MessageController.markRead)
+router.put('/:id', ownMessage, workoutIfSent, MessageController.update)
+router.delete('/:id', ownMessage, MessageController.remove)
 
 export const messageRoutes = router

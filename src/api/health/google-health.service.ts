@@ -15,6 +15,8 @@ import {
   extractSteps,
   roundValue,
 } from './google-health.normalize'
+import { ActivityDayService } from './activity-day.service'
+import { getIsraelDateKey } from './health-sync-window'
 
 const GOOGLE_HEALTH_BASE_URL = 'https://health.googleapis.com/v4'
 
@@ -105,8 +107,8 @@ export class GoogleHealthService {
       const totalCaloris =
         totalCaloriesRollup.rollupDataPoints?.[0].totalCalories?.kcalSum || 0
 
-      return {
-        status: 'ok',
+      const summary = {
+        status: 'ok' as const,
         steps: roundValue(extractSteps(stepsRollup.rollupDataPoints)),
         activeCaloriesKcal: roundValue(totalCaloris),
         distance: roundValue(
@@ -121,6 +123,20 @@ export class GoogleHealthService {
           endIso: window.endExclusive.toISOString(),
         },
       }
+
+      try {
+        await ActivityDayService.upsertDays(userId, 'google', [
+          {
+            date: getIsraelDateKey(),
+            steps: summary.steps,
+            calories: summary.activeCaloriesKcal,
+          },
+        ])
+      } catch (saveErr) {
+        logger.error('Failed to store today Google activity day', saveErr)
+      }
+
+      return summary
     } catch (err) {
       logger.error('Failed to fetch Google Health activity summary', err)
       return {
@@ -137,11 +153,13 @@ export class GoogleHealthService {
     accessToken: string,
     dataType: string,
     start: CivilDateTime,
-    end: CivilDateTime
+    end: CivilDateTime,
+    pageToken?: string
   ): Promise<DailyRollUpResponse> {
     const body: DailyRollUpRequest = {
       range: { start, end },
       windowSizeDays: 1,
+      pageToken,
     }
 
     const response = await fetch(

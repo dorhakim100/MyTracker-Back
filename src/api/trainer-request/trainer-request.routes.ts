@@ -1,53 +1,48 @@
 import { Router } from 'express'
 import { TrainerRequestController } from './trainer-request.controller'
-import { requireAuth } from '../../middleware/auth.middleware'
+import {
+  requireRequestParty,
+  requireUserAccess,
+} from '../../middleware/user-access.middleware'
 
 const router = Router()
 
-// Query all requests (with optional filters)
-router.get('/', requireAuth, TrainerRequestController.getRequests)
+const listRequests = requireUserAccess(
+  [
+    { from: 'query', name: 'trainerId', allowTrainer: false },
+    { from: 'query', name: 'traineeId' },
+  ],
+  { oneOf: true }
+)
+const ownTrainer = requireUserAccess([
+  { from: 'params', name: 'trainerId', required: true, allowTrainer: false },
+])
+const ownTrainee = requireUserAccess([
+  { from: 'params', name: 'traineeId', required: true },
+])
+const eitherParty = requireRequestParty(['trainerId', 'traineeId'])
+const traineeOnly = requireRequestParty(['traineeId'])
+const createAsTrainer = requireUserAccess([
+  { from: 'body', name: 'trainer', required: true, allowTrainer: false },
+])
 
-// Get pending requests by trainer
+router.get('/', listRequests, TrainerRequestController.getRequests)
 router.get(
   '/trainer/:trainerId/pending',
-  requireAuth,
+  ownTrainer,
   TrainerRequestController.getPendingByTrainer
 )
-
-// Get pending requests by trainee
 router.get(
   '/trainee/:traineeId/pending',
-  requireAuth,
+  ownTrainee,
   TrainerRequestController.getPendingByTrainee
 )
-
-// Get all requests by trainer
-router.get(
-  '/trainer/:trainerId',
-  requireAuth,
-  TrainerRequestController.getByTrainer
-)
-
-// Get all requests by trainee
-router.get(
-  '/trainee/:traineeId',
-  requireAuth,
-  TrainerRequestController.getByTrainee
-)
-
-// Get specific request
-router.get('/:id', requireAuth, TrainerRequestController.getRequest)
-
-// Create new request
-router.post('/', requireAuth, TrainerRequestController.createRequest)
-
-// Approve request
-router.put('/:id/approve', requireAuth, TrainerRequestController.approveRequest)
-
-// Reject request
-router.put('/:id/reject', requireAuth, TrainerRequestController.rejectRequest)
-
-// Delete request
-router.delete('/:id', requireAuth, TrainerRequestController.deleteRequest)
+router.get('/trainer/:trainerId', ownTrainer, TrainerRequestController.getByTrainer)
+router.get('/trainee/:traineeId', ownTrainee, TrainerRequestController.getByTrainee)
+router.get('/:id', eitherParty, TrainerRequestController.getRequest)
+router.post('/', createAsTrainer, TrainerRequestController.createRequest)
+router.put('/:id/approve', traineeOnly, TrainerRequestController.approveRequest)
+router.put('/:id/reject', traineeOnly, TrainerRequestController.rejectRequest)
+router.delete('/:id', eitherParty, TrainerRequestController.deleteRequest)
 
 export const trainerRequestRoutes = router

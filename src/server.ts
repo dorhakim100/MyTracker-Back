@@ -30,6 +30,7 @@ import { chatGPTRoutes } from './api/chatGPT/gpt.routes'
 import { bodyFatRoutes } from './api/body-fat/body-fat.routes'
 import { aiLogRoutes } from './api/ai-log/ai-log.routes'
 import { googleHealthRoutes } from './api/health/google-health.routes'
+import { activityRoutes } from './api/health/activity.routes'
 import { messageRoutes } from './api/message/message.routes'
 
 import { setupSocketAPI } from './services/socket/socket.service'
@@ -134,6 +135,7 @@ app.use('/api/chatgpt', chatGPTRoutes)
 app.use('/api/body-fat', bodyFatRoutes)
 app.use('/api/ai-log', aiLogRoutes)
 app.use('/api/health/google', googleHealthRoutes)
+app.use('/api/health/activity', activityRoutes)
 app.use('/api/message', messageRoutes)
 
 app.use('/api/translate', translateRoutes)

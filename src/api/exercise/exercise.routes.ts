@@ -1,13 +1,18 @@
 import { Router } from 'express'
 import { ExerciseController } from './exercise.controller'
 import { requireAuth } from '../../middleware/auth.middleware'
+import { requireUserAccess } from '../../middleware/user-access.middleware'
 
 const router = Router()
 
-// Exercise CRUD routes
+const userIfSent = requireUserAccess(
+  [{ from: 'query', name: 'userId' }],
+  { when: 'ifPresent' }
+)
+
 router.get('/', ExerciseController.getExercises)
 router.get('/alternate', ExerciseController.getAlternateExercises)
-router.get('/search', ExerciseController.searchExercises)
+router.get('/search', userIfSent, ExerciseController.searchExercises)
 router.get(
   '/search/muscle-groups',
   ExerciseController.searchExercisesByMuscleGroups
@@ -17,7 +22,6 @@ router.get('/exercise-id/bulk', ExerciseController.getExercisesByExerciseIds)
 router.get('/exercise-id', ExerciseController.getExerciseByExerciseId)
 router.get('/:id', ExerciseController.getExercise)
 
-// Protected routes (require authentication)
 router.post('/', requireAuth, ExerciseController.addExercise)
 router.post('/bulk', requireAuth, ExerciseController.addExercises)
 router.put(

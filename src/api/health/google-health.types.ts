@@ -9,9 +9,12 @@ export type DailyRollUpRequest = {
     end: CivilDateTime
   }
   windowSizeDays?: number
+  pageToken?: string
 }
 
 export type DailyRollUpDataPoint = {
+  civilStartTime?: CivilDateTime
+  civilEndTime?: CivilDateTime
   steps?: { countSum?: string }
   floors?: { countSum?: string }
   distance?: { millimetersSum?: string }
@@ -29,6 +32,7 @@ export type DailyRollUpDataPoint = {
 
 export type DailyRollUpResponse = {
   rollupDataPoints?: DailyRollUpDataPoint[]
+  nextPageToken?: string
 }
 
 export type TodayActivitySummaryResponse =

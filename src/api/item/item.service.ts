@@ -2,6 +2,7 @@ import { ItemModel, IItem } from './item.model'
 import { logger } from '../../services/logger.service'
 import { Item } from '@/types/Item/Item'
 import { MealService } from '../meal/meal.service'
+import { readableUserIds } from '../../services/user-access.service'
 import { ItemName, LocalizedName } from '@/types/Item/LocalizedName'
 import { isItemCategoryId, normalizeCategories } from './item-categories'
 
@@ -130,12 +131,15 @@ export class ItemService {
         .limit(40)
         .lean()
 
-      const meals = (await MealService.query({
-        name: {
-          $regex: this.escapeRegex(normalizedTerm),
-          $options: 'i',
-        },
-      })) as unknown as IItem[]
+      const meals = userId
+        ? ((await MealService.query({
+            name: {
+              $regex: this.escapeRegex(normalizedTerm),
+              $options: 'i',
+            },
+            createdBy: { $in: await readableUserIds(userId) },
+          })) as unknown as IItem[])
+        : []
 
       const ranked = this.rankSearchResults(items as IItem[], allVariants)
       return [...ranked, ...meals]

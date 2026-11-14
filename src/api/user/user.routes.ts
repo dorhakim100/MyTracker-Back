@@ -1,14 +1,27 @@
 import { Router } from 'express'
 import { UserController } from './user.controller'
-import { protect } from '../../middleware/auth.middleware'
+import {
+  requireTrainerSearch,
+  requireUserAccess,
+} from '../../middleware/user-access.middleware'
 
 const router = Router()
 
-router.get('/', protect, UserController.getUsers)
+const ownOrTrainee = requireUserAccess([
+  { from: 'params', name: 'id', required: true },
+])
+const selfOnly = requireUserAccess([
+  { from: 'params', name: 'id', required: true, allowTrainer: false },
+])
+const addTrainee = requireUserAccess([
+  { from: 'body', name: 'trainerId', required: true, allowTrainer: false },
+])
+
+router.get('/', requireTrainerSearch, UserController.getUsers)
 router.get('/remember/:id', UserController.rememberUser)
-router.get('/:id', protect, UserController.getUser)
-router.post('/add-trainee', protect, UserController.addTrainee)
-router.put('/:id', protect, UserController.updateUser)
-router.delete('/:id', protect, UserController.deleteUser)
+router.get('/:id', ownOrTrainee, UserController.getUser)
+router.post('/add-trainee', addTrainee, UserController.addTrainee)
+router.put('/:id', ownOrTrainee, UserController.updateUser)
+router.delete('/:id', selfOnly, UserController.deleteUser)
 
 export const userRoutes = router

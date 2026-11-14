@@ -1,14 +1,28 @@
 import { Router } from 'express'
 import { MealController } from './meal.controller'
-import { requireAuth } from '../../middleware/auth.middleware'
+import {
+  requireDocAccess,
+  requireManyDocs,
+  requireUserAccess,
+} from '../../middleware/user-access.middleware'
+import { Meal } from './meal.model'
 
 const router = Router()
 
-router.get('/', MealController.getMeals)
-router.get('/bulk', MealController.getMealsBulk)
-router.get('/:id', MealController.getMeal)
-router.post('/', requireAuth, MealController.addMeal)
-router.put('/:id', requireAuth, MealController.updateMeal)
-router.delete('/:id', requireAuth, MealController.deleteMeal)
+const listMeals = requireUserAccess([
+  { from: 'query', name: 'createdBy', required: true },
+])
+const ownMeals = requireManyDocs(Meal, 'createdBy', { query: 'mealIds' })
+const ownMeal = requireDocAccess(Meal, 'createdBy')
+const mealOwner = requireUserAccess([
+  { from: 'body', name: 'createdBy', required: true },
+])
+
+router.get('/', listMeals, MealController.getMeals)
+router.get('/bulk', ownMeals, MealController.getMealsBulk)
+router.get('/:id', ownMeal, MealController.getMeal)
+router.post('/', mealOwner, MealController.addMeal)
+router.put('/:id', ownMeal, requireUserAccess([{ from: 'body', name: 'createdBy' }]), MealController.updateMeal)
+router.delete('/:id', ownMeal, MealController.deleteMeal)
 
 export const mealRoutes = router
