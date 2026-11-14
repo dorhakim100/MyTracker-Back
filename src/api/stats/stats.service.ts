@@ -39,6 +39,32 @@ function durationMs(stats: IStats) {
   }, 0)
 }
 
+function isoUpdatedAt(set: { get(key: string): unknown } | null) {
+  const at = set?.get('updatedAt') as Date | undefined
+  if (!at) return null
+  return new Date(at).toISOString()
+}
+
+async function doneBounds(sessionId: string, after: string | null) {
+  const updatedAt: Record<string, Date> = {}
+  if (after) updatedAt.$gt = new Date(after)
+  const query: Record<string, unknown> = { sessionId, isDone: true }
+  if (after) query.updatedAt = updatedAt
+
+  const earliest = await SetModel.findOne(query).sort({ updatedAt: 1 })
+  const latest = await SetModel.findOne(query).sort({ updatedAt: -1 })
+  return {
+    from: isoUpdatedAt(earliest),
+    to: isoUpdatedAt(latest),
+  }
+}
+
+function previousClosedTo(stats: IStats) {
+  const closed = stats.timeFrames.filter((frame) => frame.to)
+  if (!closed.length) return null
+  return closed[closed.length - 1].to
+}
+
 export class StatsService {
   static async openFrame(sessionId: string, userId: string): Promise<IStats> {
     const session = await Session.findById(sessionId)
@@ -55,12 +81,21 @@ export class StatsService {
       await session.save()
     }
 
-    const hasOpen = stats.timeFrames.some((frame) => !frame.to)
-    if (!hasOpen) {
-      stats.timeFrames.push({
-        from: new Date().toISOString(),
-        to: null,
-      })
+    const after = previousClosedTo(stats)
+    const bounds = await doneBounds(sessionId, after)
+    const from = bounds.from || new Date().toISOString()
+    const openIndex = stats.timeFrames.findIndex((frame) => !frame.to)
+
+    if (openIndex === -1) {
+      stats.timeFrames.push({ from, to: null })
+      await stats.save()
+      return stats
+    }
+
+    if (from < stats.timeFrames[openIndex].from) {
+      stats.timeFrames = stats.timeFrames.map((frame, index) =>
+        index === openIndex ? { from, to: frame.to } : frame
+      )
       await stats.save()
     }
 
@@ -71,14 +106,19 @@ export class StatsService {
     const stats = await Stats.findOne({ sessionId })
     if (!stats) return null
 
-    const now = new Date().toISOString()
-    let changed = false
-    stats.timeFrames = stats.timeFrames.map((frame) => {
-      if (frame.to) return frame
-      changed = true
-      return { from: frame.from, to: now }
-    })
-    if (changed) await stats.save()
+    const openIndex = stats.timeFrames.findIndex((frame) => !frame.to)
+    if (openIndex === -1) return stats
+
+    const bounds = await doneBounds(sessionId, previousClosedTo(stats))
+    const open = stats.timeFrames[openIndex]
+    const from = bounds.from && bounds.from < open.from ? bounds.from : open.from
+    const to =
+      bounds.to && bounds.to >= from ? bounds.to : new Date().toISOString()
+
+    stats.timeFrames = stats.timeFrames.map((frame, index) =>
+      index === openIndex ? { from, to } : frame
+    )
+    await stats.save()
     return stats
   }
 
