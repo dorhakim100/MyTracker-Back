@@ -18,6 +18,8 @@ export interface SessionStatsExercise {
 }
 
 export interface SessionStatsRecap {
+  startTime: string | null
+  isFinished: boolean
   durationMs: number
   actualRpe: number | null
   accuracy: number | null

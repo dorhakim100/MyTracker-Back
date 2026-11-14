@@ -4,11 +4,7 @@ import { WorkoutService } from '../workout/workout.service'
 import { Instructions } from '../instructions/instructions.model'
 import { logger } from '../../services/logger.service'
 import { Stats, IStats } from './stats.model'
-import {
-  average,
-  setAccuracy,
-  setActualRpe,
-} from './stats.accuracy'
+import { average, setAccuracy, setActualRpe } from './stats.accuracy'
 import {
   SessionPr,
   SessionStatsExercise,
@@ -27,6 +23,15 @@ function setPlannedVolume(set: {
   reps?: { expected?: number }
 }) {
   return (set.weight?.expected ?? 0) * (set.reps?.expected ?? 0)
+}
+
+function startTime(stats: IStats | null) {
+  if (!stats?.timeFrames.length) return null
+  const times = stats.timeFrames
+    .map((frame) => frame.from)
+    .filter((from) => Boolean(from))
+    .sort()
+  return times[0] || null
 }
 
 function durationMs(stats: IStats) {
@@ -68,7 +73,8 @@ function previousClosedTo(stats: IStats) {
 export class StatsService {
   static async openFrame(sessionId: string, userId: string): Promise<IStats> {
     const session = await Session.findById(sessionId)
-    if (!session) throw Object.assign(new Error('Session not found'), { statusCode: 404 })
+    if (!session)
+      throw Object.assign(new Error('Session not found'), { statusCode: 404 })
 
     let stats = await Stats.findOne({ sessionId })
     if (!stats) {
@@ -111,7 +117,8 @@ export class StatsService {
 
     const bounds = await doneBounds(sessionId, previousClosedTo(stats))
     const open = stats.timeFrames[openIndex]
-    const from = bounds.from && bounds.from < open.from ? bounds.from : open.from
+    const from =
+      bounds.from && bounds.from < open.from ? bounds.from : open.from
     const to =
       bounds.to && bounds.to >= from ? bounds.to : new Date().toISOString()
 
@@ -122,7 +129,10 @@ export class StatsService {
     return stats
   }
 
-  static async finish(sessionId: string, userId: string): Promise<SessionStatsRecap> {
+  static async finish(
+    sessionId: string,
+    userId: string
+  ): Promise<SessionStatsRecap> {
     const existing = await Stats.findOne({ sessionId })
     if (!existing) {
       await this.openFrame(sessionId, userId)
@@ -145,7 +155,10 @@ export class StatsService {
       })
       const doneSets = sessionSets.filter((set) => set.isDone)
 
-      const volumeActual = doneSets.reduce((sum, set) => sum + setVolume(set), 0)
+      const volumeActual = doneSets.reduce(
+        (sum, set) => sum + setVolume(set),
+        0
+      )
       const volumePlanned = sessionSets.reduce(
         (sum, set) => sum + setPlannedVolume(set),
         0
@@ -158,9 +171,7 @@ export class StatsService {
         ? await Instructions.findById(session.instructionsId).lean()
         : null
 
-      const loggedIds = [
-        ...new Set(sessionSets.map((set) => set.exerciseId)),
-      ]
+      const loggedIds = [...new Set(sessionSets.map((set) => set.exerciseId))]
       const loggedIdSet = new Set(loggedIds)
       const instructionIds = (instructions?.exercises || []).map(
         (exercise) => exercise.exerciseId
@@ -185,38 +196,40 @@ export class StatsService {
         exerciseIds
       )
 
-      const exercises: SessionStatsExercise[] = exerciseIds.map((exerciseId) => {
-        const exerciseSets = sessionSets.filter(
-          (set) => set.exerciseId === exerciseId
-        )
-        const exerciseDone = exerciseSets.filter((set) => set.isDone)
-        const workoutEx = workoutDoc?.exercises?.find(
-          (exercise: { exerciseId: string; name?: string; image?: string }) =>
-            exercise.exerciseId === exerciseId
-        )
-        const instructionEx = instructions?.exercises?.find(
-          (exercise) => exercise.exerciseId === exerciseId
-        )
-        const name = workoutEx?.name || instructionEx?.name || exerciseId
-        const image = workoutEx?.image || instructionEx?.image
+      const exercises: SessionStatsExercise[] = exerciseIds.map(
+        (exerciseId) => {
+          const exerciseSets = sessionSets.filter(
+            (set) => set.exerciseId === exerciseId
+          )
+          const exerciseDone = exerciseSets.filter((set) => set.isDone)
+          const workoutEx = workoutDoc?.exercises?.find(
+            (exercise: { exerciseId: string; name?: string; image?: string }) =>
+              exercise.exerciseId === exerciseId
+          )
+          const instructionEx = instructions?.exercises?.find(
+            (exercise) => exercise.exerciseId === exerciseId
+          )
+          const name = workoutEx?.name || instructionEx?.name || exerciseId
+          const image = workoutEx?.image || instructionEx?.image
 
-        return {
-          exerciseId,
-          name,
-          image,
-          actualRpe: average(exerciseDone.map(setActualRpe)),
-          accuracy: skipAccuracyIds.has(exerciseId)
-            ? null
-            : average(exerciseDone.map(setAccuracy)),
-          prs: this.prsForExercise(
+          return {
             exerciseId,
             name,
-            sessionId,
-            exerciseDone,
-            historyByExercise.get(exerciseId) || []
-          ),
+            image,
+            actualRpe: average(exerciseDone.map(setActualRpe)),
+            accuracy: skipAccuracyIds.has(exerciseId)
+              ? null
+              : average(exerciseDone.map(setAccuracy)),
+            prs: this.prsForExercise(
+              exerciseId,
+              name,
+              sessionId,
+              exerciseDone,
+              historyByExercise.get(exerciseId) || []
+            ),
+          }
         }
-      })
+      )
 
       const vsLastPercent = await this.vsLastPercent(
         session.userId,
@@ -225,7 +238,11 @@ export class StatsService {
         volumeActual
       )
 
+      const isAllSetsDone = sessionSets.every((set) => set.isDone)
+
       return {
+        startTime: startTime(stats),
+        isFinished: Boolean(isAllSetsDone || instructions?.isFinished),
         durationMs: stats ? durationMs(stats) : 0,
         actualRpe: average(doneSets.map(setActualRpe)),
         accuracy: average(accuracyDoneSets.map(setAccuracy)),
@@ -242,7 +259,10 @@ export class StatsService {
     }
   }
 
-  private static async historyByExercise(userId: string, exerciseIds: string[]) {
+  private static async historyByExercise(
+    userId: string,
+    exerciseIds: string[]
+  ) {
     const map = new Map<string, ISet[]>()
     if (!exerciseIds.length) return map
 
@@ -331,7 +351,10 @@ export class StatsService {
       sessionId: previous._id.toString(),
       isDone: true,
     })
-    const lastVolume = previousSets.reduce((sum, set) => sum + setVolume(set), 0)
+    const lastVolume = previousSets.reduce(
+      (sum, set) => sum + setVolume(set),
+      0
+    )
     if (!lastVolume) return null
     return (volumeActual / lastVolume) * 100
   }
