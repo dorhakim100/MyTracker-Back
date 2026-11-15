@@ -20,6 +20,7 @@ const paramUser = requireUserAccess([
 const ownDay = requireDocAccess(Day, 'userId')
 
 router.get('/', queryUser, DayController.get)
+router.get('/intake', queryUser, DayController.intake)
 router.post('/', bodyUser, DayController.upsert)
 router.get('/:id', ownDay, DayController.getById)
 router.put('/:id', ownDay, requireUserAccess([{ from: 'body', name: 'userId' }]), DayController.update)

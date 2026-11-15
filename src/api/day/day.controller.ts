@@ -1,7 +1,25 @@
 import { Request, Response } from 'express'
 import { DayService } from './day.service'
+import { IntakePageService } from './intake-page.service'
 
 export class DayController {
+  static async intake(req: Request, res: Response) {
+    const { userId, frame, end } = req.query as {
+      userId?: string
+      frame?: string
+      end?: string
+    }
+    try {
+      if (!userId || !frame || !IntakePageService.isFrame(frame)) {
+        return res.status(400).send({ err: 'Invalid intake page request' })
+      }
+      const page = await IntakePageService.getPage(userId, frame, end)
+      return res.json(page)
+    } catch {
+      return res.status(500).send({ err: 'Failed to get intake' })
+    }
+  }
+
   static async get(req: Request, res: Response) {
     const { date, userId } = req.query as { date: string; userId: string }
     try {
