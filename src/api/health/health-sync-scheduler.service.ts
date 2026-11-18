@@ -3,8 +3,8 @@ import { GoogleHealthSnapshotService } from './google-health-snapshot.service'
 import { isWithinSyncWindow } from './health-sync-window'
 
 export class HealthSyncSchedulerService {
-  static async runTick(): Promise<void> {
-    if (!isWithinSyncWindow()) {
+  static async runTick(force = false): Promise<void> {
+    if (!force && !isWithinSyncWindow()) {
       logger.info('HealthSyncScheduler: skipped — outside sync window')
       return
     }
@@ -33,7 +33,7 @@ export class HealthSyncSchedulerService {
     }
 
     logger.info(
-      `HealthSyncScheduler: tick complete users=${userIds.length} updated=${updated} skipped=${skipped} errors=${errors}`
+      `HealthSyncScheduler: tick complete${force ? ' (end of day)' : ''} users=${userIds.length} updated=${updated} skipped=${skipped} errors=${errors}`
     )
   }
 }

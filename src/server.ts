@@ -39,6 +39,7 @@ import { logger } from './services/logger.service'
 import { startBodyFatCleanupCron } from './jobs/body-fat-cleanup.cron'
 import { startAiPlateCleanupCron } from './jobs/ai-plate-cleanup.cron'
 import { startGoogleHealthSnapshotCron } from './jobs/google-health-snapshot.cron'
+import { ActivityDayService } from './api/health/activity-day.service'
 
 const app = express()
 const server = http.createServer(app)
@@ -157,6 +158,7 @@ const connectDB = async () => {
     const conn = await mongoose.connect(uri, { dbName })
 
     logger.info(`MongoDB Connected: ${conn.connection.host}`)
+    await ActivityDayService.ensureActivityDayIndex()
   } catch (error) {
     logger.error('Error connecting to MongoDB:', error)
     process.exit(1)

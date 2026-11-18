@@ -3,11 +3,12 @@ import { logger } from '../services/logger.service'
 import { startCron } from './cron.service'
 
 const HEALTH_SYNC_CRON_EXPRESSION = '*/5 * * * *'
+const HEALTH_SYNC_END_OF_DAY_CRON = '59 23 * * *'
 const HEALTH_SYNC_CRON_TIMEZONE = 'Asia/Jerusalem'
 
 let isRunning = false
 
-async function runGoogleHealthSnapshotSync(): Promise<void> {
+async function runGoogleHealthSnapshotSync(force = false): Promise<void> {
   if (isRunning) {
     logger.warn(
       'GoogleHealthSnapshotCron: skipped — previous run still in progress'
@@ -18,7 +19,7 @@ async function runGoogleHealthSnapshotSync(): Promise<void> {
   isRunning = true
 
   try {
-    await HealthSyncSchedulerService.runTick()
+    await HealthSyncSchedulerService.runTick(force)
   } catch (err) {
     logger.error('GoogleHealthSnapshotCron: tick failed', err)
   } finally {
@@ -28,8 +29,13 @@ async function runGoogleHealthSnapshotSync(): Promise<void> {
 
 export function startGoogleHealthSnapshotCron(): void {
   startCron(
-    runGoogleHealthSnapshotSync,
+    () => runGoogleHealthSnapshotSync(false),
     HEALTH_SYNC_CRON_EXPRESSION,
+    HEALTH_SYNC_CRON_TIMEZONE
+  )
+  startCron(
+    () => runGoogleHealthSnapshotSync(true),
+    HEALTH_SYNC_END_OF_DAY_CRON,
     HEALTH_SYNC_CRON_TIMEZONE
   )
 }

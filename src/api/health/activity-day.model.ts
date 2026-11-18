@@ -21,7 +21,7 @@ const activityDaySchema = new mongoose.Schema(
   { versionKey: false }
 )
 
-activityDaySchema.index({ userId: 1, date: 1, vendor: 1 }, { unique: true })
+activityDaySchema.index({ userId: 1, date: 1 }, { unique: true })
 
 export const ActivityDay = mongoose.model<IActivityDay>(
   'ActivityDay',
