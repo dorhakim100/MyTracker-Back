@@ -35,36 +35,35 @@ async function upsertDays(
     byDate.set(row.date, group)
   }
 
-  const ops = days.flatMap((day) => {
+  const ops: Parameters<typeof ActivityDay.bulkWrite>[0] = []
+
+  for (const day of days) {
     const steps = Math.round(day.steps) || 0
     const calories = Math.round(day.calories) || 0
     const rows = byDate.get(day.date) ?? []
     const keep = rows.find((row) => row.vendor === vendor) ?? rows[0]
 
     if (!keep) {
-      return [
-        {
-          insertOne: {
-            document: { userId, date: day.date, vendor, steps, calories },
-          },
+      ops.push({
+        insertOne: {
+          document: { userId, date: day.date, vendor, steps, calories },
         },
-      ]
+      })
+      continue
     }
 
-    return [
-      ...rows
-        .filter((row) => String(row._id) !== String(keep._id))
-        .map((row) => ({
-          deleteOne: { filter: { _id: row._id } },
-        })),
-      {
-        updateOne: {
-          filter: { _id: keep._id },
-          update: { $set: { vendor, steps, calories } },
-        },
+    for (const row of rows) {
+      if (String(row._id) === String(keep._id)) continue
+      ops.push({ deleteOne: { filter: { _id: row._id } } })
+    }
+
+    ops.push({
+      updateOne: {
+        filter: { _id: keep._id },
+        update: { $set: { vendor, steps, calories } },
       },
-    ]
-  })
+    })
+  }
 
   if (ops.length) await ActivityDay.bulkWrite(ops)
 }
