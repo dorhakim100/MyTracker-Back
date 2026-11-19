@@ -67,6 +67,27 @@ export class GoogleHealthSnapshotService {
     return { status: 'updated', changed }
   }
 
+  static async syncUserDate(
+    userId: string,
+    date: string
+  ): Promise<SyncUserSnapshotResult> {
+    const connectionStatus = await GoogleHealthService.getStatus(userId)
+    if (!connectionStatus.connected) {
+      return { status: 'skipped', reason: 'not_connected' }
+    }
+
+    const summary = await GoogleHealthService.fetchActivitySummaryForDate(
+      userId,
+      date
+    )
+    if (summary.status !== 'ok') {
+      return { status: 'skipped', reason: 'fetch_error' }
+    }
+
+    await GoogleHealthSnapshotService.upsertSnapshot(userId, summary, date)
+    return { status: 'updated', changed: true }
+  }
+
   static async listConnectedUserIds(): Promise<string[]> {
     const users = await User.find({
       googleId: { $exists: true, $ne: null },
@@ -78,9 +99,9 @@ export class GoogleHealthSnapshotService {
 
   private static async upsertSnapshot(
     userId: string,
-    summary: Extract<TodayActivitySummaryResponse, { status: 'ok' }>
+    summary: Extract<TodayActivitySummaryResponse, { status: 'ok' }>,
+    date: string = getIsraelDateKey()
   ): Promise<{ snapshot: GoogleHealthSnapshotResponse; changed: boolean }> {
-    const date = getIsraelDateKey()
     const existing = await GoogleHealthSnapshot.findOne({ userId, date })
 
     const changed =

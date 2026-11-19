@@ -16,6 +16,7 @@ import {
   roundValue,
 } from './google-health.normalize'
 import { ActivityDayService } from './activity-day.service'
+import { addDays } from './activity-dates'
 import { getIsraelDateKey } from './health-sync-window'
 
 const GOOGLE_HEALTH_BASE_URL = 'https://health.googleapis.com/v4'
@@ -63,17 +64,29 @@ export class GoogleHealthService {
       return { status: 'not_connected' }
     }
 
-    return GoogleHealthService.fetchTodayActivitySummaryFromGoogle(userId)
+    return GoogleHealthService.fetchActivitySummaryForDate(
+      userId,
+      getIsraelDateKey()
+    )
   }
 
   static async fetchTodayActivitySummaryFromGoogle(
     userId: string
   ): Promise<TodayActivitySummaryResponse> {
+    return GoogleHealthService.fetchActivitySummaryForDate(
+      userId,
+      getIsraelDateKey()
+    )
+  }
+
+  static async fetchActivitySummaryForDate(
+    userId: string,
+    dateKey: string
+  ): Promise<TodayActivitySummaryResponse> {
     try {
       const accessToken = await GoogleOAuthService.getAccessTokenForUser(userId)
-      const window = getLocalTodayWindow()
-      const start = toCivilDateTime(window.start)
-      const end = toCivilDateTime(window.endExclusive)
+      const start = civilDay(dateKey)
+      const end = civilDay(addDays(dateKey, 1))
 
       const [
         stepsRollup,
@@ -119,15 +132,15 @@ export class GoogleHealthService {
           extractFloors(floorsRollup.rollupDataPoints)
         ),
         window: {
-          startIso: window.start.toISOString(),
-          endIso: window.endExclusive.toISOString(),
+          startIso: `${dateKey}T00:00:00`,
+          endIso: `${addDays(dateKey, 1)}T00:00:00`,
         },
       }
 
       try {
         await ActivityDayService.upsertDays(userId, 'google', [
           {
-            date: getIsraelDateKey(),
+            date: dateKey,
             steps: summary.steps,
             calories: summary.activeCaloriesKcal,
           },
@@ -185,29 +198,10 @@ export class GoogleHealthService {
   }
 }
 
-function getLocalTodayWindow() {
-  const now = new Date()
-  const start = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate(),
-    0,
-    0,
-    0,
-    0
-  )
-  const endExclusive = new Date(start)
-  endExclusive.setDate(endExclusive.getDate() + 1)
-  return { start, endExclusive, now }
-}
-
-function toCivilDateTime(date: Date): CivilDateTime {
+function civilDay(dateKey: string): CivilDateTime {
+  const [year, month, day] = dateKey.split('-').map(Number)
   return {
-    date: {
-      year: date.getFullYear(),
-      month: date.getMonth() + 1,
-      day: date.getDate(),
-    },
+    date: { year, month, day },
     time: { hours: 0, minutes: 0, seconds: 0, nanos: 0 },
   }
 }

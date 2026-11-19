@@ -11,8 +11,8 @@ function assert(condition: unknown, message: string) {
 
 const outsideBeforeWindow = new Date('2026-07-03T04:59:00.000Z')
 const insideAtStart = new Date('2026-07-03T05:00:00.000Z')
-const insideBeforeEnd = new Date('2026-07-03T16:59:00.000Z')
-const outsideAtEnd = new Date('2026-07-03T17:00:00.000Z')
+const insideBeforeEnd = new Date('2026-07-03T20:59:00.000Z')
+const outsideAtEnd = new Date('2026-07-03T21:00:00.000Z')
 
 assert(
   !isWithinSyncWindow(outsideBeforeWindow),
@@ -24,11 +24,11 @@ assert(
 )
 assert(
   isWithinSyncWindow(insideBeforeEnd),
-  '19:59 Asia/Jerusalem should be inside sync window'
+  '23:59 Asia/Jerusalem should be inside sync window'
 )
 assert(
   !isWithinSyncWindow(outsideAtEnd),
-  '20:00 Asia/Jerusalem should be outside sync window'
+  '00:00 Asia/Jerusalem should be outside sync window'
 )
 
 assert(

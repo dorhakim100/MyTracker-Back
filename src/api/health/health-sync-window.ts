@@ -1,6 +1,6 @@
 export const HEALTH_SYNC_TIMEZONE = 'Asia/Jerusalem'
 export const HEALTH_SYNC_START_HOUR = 8
-export const HEALTH_SYNC_END_HOUR = 23
+export const HEALTH_SYNC_END_HOUR = 24
 
 type SyncWindowParts = {
   hour: number

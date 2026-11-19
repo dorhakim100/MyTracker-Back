@@ -4,6 +4,7 @@ import { startCron } from './cron.service'
 
 const HEALTH_SYNC_CRON_EXPRESSION = '*/5 * * * *'
 const HEALTH_SYNC_END_OF_DAY_CRON = '59 23 * * *'
+const HEALTH_SYNC_PREVIOUS_DAY_CRON = '15 0 * * *'
 const HEALTH_SYNC_CRON_TIMEZONE = 'Asia/Jerusalem'
 
 let isRunning = false
@@ -27,6 +28,25 @@ async function runGoogleHealthSnapshotSync(force = false): Promise<void> {
   }
 }
 
+async function runPreviousDaySnapshotSync(): Promise<void> {
+  if (isRunning) {
+    logger.warn(
+      'GoogleHealthSnapshotCron: previous day skipped — previous run still in progress'
+    )
+    return
+  }
+
+  isRunning = true
+
+  try {
+    await HealthSyncSchedulerService.runPreviousDayTick()
+  } catch (err) {
+    logger.error('GoogleHealthSnapshotCron: previous day failed', err)
+  } finally {
+    isRunning = false
+  }
+}
+
 export function startGoogleHealthSnapshotCron(): void {
   startCron(
     () => runGoogleHealthSnapshotSync(false),
@@ -36,6 +56,11 @@ export function startGoogleHealthSnapshotCron(): void {
   startCron(
     () => runGoogleHealthSnapshotSync(true),
     HEALTH_SYNC_END_OF_DAY_CRON,
+    HEALTH_SYNC_CRON_TIMEZONE
+  )
+  startCron(
+    runPreviousDaySnapshotSync,
+    HEALTH_SYNC_PREVIOUS_DAY_CRON,
     HEALTH_SYNC_CRON_TIMEZONE
   )
 }
