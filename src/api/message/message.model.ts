@@ -5,7 +5,7 @@ export type MessageType = 'text' | 'image' | 'video'
 
 export interface IMessage extends mongoose.Document {
   date: Date
-  exerciseId: string
+  exerciseId?: string
   workoutId: string
   senderId: string
   role: MessageRole
@@ -29,7 +29,7 @@ const messageSchema = new mongoose.Schema(
     },
     exerciseId: {
       type: String,
-      required: true,
+      required: false,
       index: true,
     },
     workoutId: {

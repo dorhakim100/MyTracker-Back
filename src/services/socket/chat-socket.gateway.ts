@@ -6,14 +6,23 @@ export class ChatSocketGateway {
     return `workout:${workoutId}:exercise:${exerciseId}`
   }
 
+  static getSessionRoom(workoutId: string): string {
+    return `workout:${workoutId}:session`
+  }
+
+  static resolveRoom(workoutId: string, exerciseId?: string | null): string {
+    if (!exerciseId) return ChatSocketGateway.getSessionRoom(workoutId)
+    return ChatSocketGateway.getRoom(workoutId, exerciseId)
+  }
+
   static emitMessageAdded(
     workoutId: string,
-    exerciseId: string,
+    exerciseId: string | null | undefined,
     message: unknown
   ): void {
     const io = getSocketIO()
     if (!io) return
-    io.to(ChatSocketGateway.getRoom(workoutId, exerciseId)).emit(
+    io.to(ChatSocketGateway.resolveRoom(workoutId, exerciseId)).emit(
       'exercise-chat:message-added',
       message
     )
@@ -21,12 +30,12 @@ export class ChatSocketGateway {
 
   static emitMessageUpdated(
     workoutId: string,
-    exerciseId: string,
+    exerciseId: string | null | undefined,
     message: unknown
   ): void {
     const io = getSocketIO()
     if (!io) return
-    io.to(ChatSocketGateway.getRoom(workoutId, exerciseId)).emit(
+    io.to(ChatSocketGateway.resolveRoom(workoutId, exerciseId)).emit(
       'exercise-chat:message-updated',
       message
     )
@@ -34,14 +43,18 @@ export class ChatSocketGateway {
 
   static emitMessageRemoved(
     workoutId: string,
-    exerciseId: string,
+    exerciseId: string | null | undefined,
     messageId: string
   ): void {
     const io = getSocketIO()
     if (!io) return
-    io.to(ChatSocketGateway.getRoom(workoutId, exerciseId)).emit(
+    io.to(ChatSocketGateway.resolveRoom(workoutId, exerciseId)).emit(
       'exercise-chat:message-removed',
-      { messageId, workoutId, exerciseId }
+      {
+        messageId,
+        workoutId,
+        ...(exerciseId ? { exerciseId } : {}),
+      }
     )
   }
 
@@ -49,7 +62,7 @@ export class ChatSocketGateway {
     userIds: string[],
     payload?: {
       workoutId: string
-      exerciseId: string
+      exerciseId?: string
       forUserId?: string
       senderRole: 'trainer' | 'trainee'
     }

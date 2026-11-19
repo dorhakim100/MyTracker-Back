@@ -36,10 +36,8 @@ export class MessageController {
         workoutId?: string
         exerciseId?: string
       }
-      if (!workoutId || !exerciseId) {
-        return res
-          .status(400)
-          .send({ err: 'workoutId and exerciseId are required' })
+      if (!workoutId) {
+        return res.status(400).send({ err: 'workoutId is required' })
       }
 
       const messages = await MessageService.listByRoom(
@@ -47,7 +45,7 @@ export class MessageController {
         workoutId,
         exerciseId
       )
-      res.json(messages)
+      res.json(Array.isArray(messages) ? messages : [])
     } catch (err) {
       handleError(res, err, 'Failed to list messages')
     }
@@ -65,10 +63,8 @@ export class MessageController {
         content?: string
         _id?: string
       }
-      if (!workoutId || !exerciseId || !role) {
-        return res
-          .status(400)
-          .send({ err: 'workoutId, exerciseId, and role are required' })
+      if (!workoutId || !role) {
+        return res.status(400).send({ err: 'workoutId and role are required' })
       }
 
       const message = await MessageService.add(userId, {
@@ -84,7 +80,7 @@ export class MessageController {
       const notifyIds = await MessageService.notifyUserIdsForWorkout(workout)
       ChatSocketGateway.emitUnread(notifyIds, {
         workoutId,
-        exerciseId,
+        ...(exerciseId ? { exerciseId } : {}),
         forUserId: String(workout.forUserId),
         senderRole: message.role,
       })
@@ -164,10 +160,8 @@ export class MessageController {
         workoutId?: string
         exerciseId?: string
       }
-      if (!workoutId || !exerciseId) {
-        return res
-          .status(400)
-          .send({ err: 'workoutId and exerciseId are required' })
+      if (!workoutId) {
+        return res.status(400).send({ err: 'workoutId is required' })
       }
 
       const result = await MessageService.markRead(

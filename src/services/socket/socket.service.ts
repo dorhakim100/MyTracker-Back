@@ -105,11 +105,10 @@ export const setupSocketAPI = (server: HttpServer) => {
       'exercise-chat:join',
       async (data: { workoutId?: string; exerciseId?: string }) => {
         const workoutId = data?.workoutId
-        const exerciseId = data?.exerciseId
-        if (!workoutId || !exerciseId) return
+        if (!workoutId) return
         try {
           await MessageService.assertCanAccessWorkout(userId, workoutId)
-          socket.join(ChatSocketGateway.getRoom(workoutId, exerciseId))
+          socket.join(ChatSocketGateway.resolveRoom(workoutId, data?.exerciseId))
         } catch (err) {
           logger.error('Failed to join exercise chat room', err)
         }
@@ -120,9 +119,8 @@ export const setupSocketAPI = (server: HttpServer) => {
       'exercise-chat:leave',
       (data: { workoutId?: string; exerciseId?: string }) => {
         const workoutId = data?.workoutId
-        const exerciseId = data?.exerciseId
-        if (!workoutId || !exerciseId) return
-        socket.leave(ChatSocketGateway.getRoom(workoutId, exerciseId))
+        if (!workoutId) return
+        socket.leave(ChatSocketGateway.resolveRoom(workoutId, data?.exerciseId))
       }
     )
 

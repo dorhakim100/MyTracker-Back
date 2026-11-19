@@ -3,7 +3,7 @@ import mongoose from 'mongoose'
 export interface IMessageRead extends mongoose.Document {
   userId: string
   workoutId: string
-  exerciseId: string
+  exerciseId?: string | null
   lastReadAt: Date
 }
 
@@ -19,7 +19,8 @@ const messageReadSchema = new mongoose.Schema(
     },
     exerciseId: {
       type: String,
-      required: true,
+      required: false,
+      default: null,
     },
     lastReadAt: {
       type: Date,

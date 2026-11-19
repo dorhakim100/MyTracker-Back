@@ -5,6 +5,35 @@ import { WorkoutService } from '../workout/workout.service'
 import { Workout } from '../workout/workout.model'
 import { User } from '../user/user.model'
 
+function asMessages<T>(value: unknown): T[] {
+  return Array.isArray(value) ? value : []
+}
+
+function sessionExerciseMatch() {
+  return {
+    $or: [
+      { exerciseId: null },
+      { exerciseId: '' },
+      { exerciseId: { $exists: false } },
+    ],
+  }
+}
+
+function emptyUnreadSummary() {
+  return {
+    trainees: {} as Record<string, number>,
+    workouts: {} as Record<string, number>,
+    exercises: {} as Record<string, Record<string, number>>,
+    sessions: {} as Record<string, number>,
+    hasMessages: {
+      trainees: {} as Record<string, boolean>,
+      workouts: {} as Record<string, boolean>,
+      exercises: {} as Record<string, Record<string, boolean>>,
+      sessions: {} as Record<string, boolean>,
+    },
+  }
+}
+
 export class AccessDeniedError extends Error {
   statusCode = 403
   constructor(message = 'Not allowed') {
@@ -184,20 +213,19 @@ export class MessageService {
   static async listByRoom(
     userId: string,
     workoutId: string,
-    exerciseId: string
+    exerciseId?: string
   ) {
     await this.assertCanAccessWorkout(userId, workoutId)
-    return Message.aggregate([
-      {
-        $match: {
-          workoutId,
-          exerciseId,
-          deletedAt: null,
-        },
-      },
+    const roomMatch = exerciseId
+      ? { workoutId, exerciseId, deletedAt: null }
+      : { workoutId, deletedAt: null, ...sessionExerciseMatch() }
+
+    const messages = await Message.aggregate([
+      { $match: roomMatch },
       { $sort: { date: 1 } },
       ...SENDER_LOOKUP,
     ])
+    return asMessages(messages)
   }
 
   static async add(
@@ -205,7 +233,7 @@ export class MessageService {
     payload: {
       _id?: string
       workoutId: string
-      exerciseId: string
+      exerciseId?: string
       role: MessageRole
       content: string
     }
@@ -225,7 +253,7 @@ export class MessageService {
       _id: id,
       date: new Date(),
       workoutId: payload.workoutId,
-      exerciseId: payload.exerciseId,
+      ...(payload.exerciseId ? { exerciseId: payload.exerciseId } : {}),
       senderId: userId,
       role: payload.role,
       type: 'text',
@@ -280,11 +308,16 @@ export class MessageService {
     return existing
   }
 
-  static async markRead(userId: string, workoutId: string, exerciseId: string) {
+  static async markRead(
+    userId: string,
+    workoutId: string,
+    exerciseId?: string
+  ) {
     await this.assertCanAccessWorkout(userId, workoutId)
+    const roomExerciseId = exerciseId || null
     await MessageRead.findOneAndUpdate(
-      { userId, workoutId, exerciseId },
-      { lastReadAt: new Date() },
+      { userId, workoutId, exerciseId: roomExerciseId },
+      { lastReadAt: new Date(), exerciseId: roomExerciseId },
       { upsert: true, new: true }
     )
     return { ok: true }
@@ -296,25 +329,18 @@ export class MessageService {
     const workoutIds = workouts.map((w) => String(w._id))
 
     if (workoutIds.length === 0) {
-      return {
-        trainees: {} as Record<string, number>,
-        workouts: {} as Record<string, number>,
-        exercises: {} as Record<string, Record<string, number>>,
-        hasMessages: {
-          trainees: {} as Record<string, boolean>,
-          workouts: {} as Record<string, boolean>,
-          exercises: {} as Record<string, Record<string, boolean>>,
-        },
-      }
+      return emptyUnreadSummary()
     }
 
-    const [rows, startedRows] = await Promise.all([
+    const [rows, startedRows, sessionRows, startedSessionRows] =
+      await Promise.all([
       Message.aggregate([
         {
           $match: {
             workoutId: { $in: workoutIds },
             role: otherRole,
             deletedAt: null,
+            exerciseId: { $exists: true, $nin: [null, ''] },
           },
         },
         {
@@ -367,11 +393,78 @@ export class MessageService {
           $match: {
             workoutId: { $in: workoutIds },
             deletedAt: null,
+            exerciseId: { $exists: true, $nin: [null, ''] },
           },
         },
         {
           $group: {
             _id: { workoutId: '$workoutId', exerciseId: '$exerciseId' },
+          },
+        },
+      ]),
+      Message.aggregate([
+        {
+          $match: {
+            workoutId: { $in: workoutIds },
+            role: otherRole,
+            deletedAt: null,
+            ...sessionExerciseMatch(),
+          },
+        },
+        {
+          $lookup: {
+            from: 'messagereads',
+            let: { workoutId: '$workoutId' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ['$userId', userId] },
+                      { $eq: ['$workoutId', '$$workoutId'] },
+                      { $eq: [{ $ifNull: ['$exerciseId', null] }, null] },
+                    ],
+                  },
+                },
+              },
+            ],
+            as: 'reads',
+          },
+        },
+        {
+          $addFields: {
+            lastReadAt: { $arrayElemAt: ['$reads.lastReadAt', 0] },
+          },
+        },
+        {
+          $match: {
+            $expr: {
+              $or: [
+                { $eq: [{ $ifNull: ['$lastReadAt', null] }, null] },
+                { $gt: ['$date', '$lastReadAt'] },
+              ],
+            },
+          },
+        },
+        {
+          $group: {
+            _id: '$workoutId',
+            messages: { $push: '$_id' },
+          },
+        },
+      ]),
+      Message.aggregate([
+        {
+          $match: {
+            workoutId: { $in: workoutIds },
+            deletedAt: null,
+            ...sessionExerciseMatch(),
+          },
+        },
+        {
+          $group: {
+            _id: '$workoutId',
+            messages: { $push: '$_id' },
           },
         },
       ]),
@@ -384,10 +477,12 @@ export class MessageService {
     const trainees: Record<string, number> = {}
     const workoutCounts: Record<string, number> = {}
     const exercises: Record<string, Record<string, number>> = {}
+    const sessions: Record<string, number> = {}
     const hasMessages = {
       trainees: {} as Record<string, boolean>,
       workouts: {} as Record<string, boolean>,
       exercises: {} as Record<string, Record<string, boolean>>,
+      sessions: {} as Record<string, boolean>,
     }
 
     for (const row of rows) {
@@ -395,7 +490,7 @@ export class MessageService {
       const exerciseId = row._id.exerciseId as string
       const count = row.count as number
       const forUserId = workoutById.get(workoutId)
-      if (!forUserId) continue
+      if (!forUserId || !exerciseId) continue
 
       workoutCounts[workoutId] = (workoutCounts[workoutId] || 0) + count
       trainees[forUserId] = (trainees[forUserId] || 0) + count
@@ -418,7 +513,36 @@ export class MessageService {
       hasMessages.exercises[workoutId][exerciseId] = true
     }
 
-    return { trainees, workouts: workoutCounts, exercises, hasMessages }
+    for (const row of sessionRows) {
+      const workoutId = String(row._id)
+      const messages = asMessages(row.messages)
+      const count = messages.length
+      const forUserId = workoutById.get(workoutId)
+      if (!forUserId || count < 1) continue
+
+      sessions[workoutId] = (sessions[workoutId] || 0) + count
+      workoutCounts[workoutId] = (workoutCounts[workoutId] || 0) + count
+      trainees[forUserId] = (trainees[forUserId] || 0) + count
+    }
+
+    for (const row of startedSessionRows) {
+      const workoutId = String(row._id)
+      const messages = asMessages(row.messages)
+      const forUserId = workoutById.get(workoutId)
+      if (!forUserId || messages.length < 1) continue
+
+      hasMessages.sessions[workoutId] = true
+      hasMessages.workouts[workoutId] = true
+      hasMessages.trainees[forUserId] = true
+    }
+
+    return {
+      trainees,
+      workouts: workoutCounts,
+      exercises,
+      sessions,
+      hasMessages,
+    }
   }
 
   private static async workoutsForUnread(
