@@ -6,7 +6,8 @@ export const aiLogResponseSchema: ResponseSchema = {
     mode: {
       type: SchemaType.STRING,
       format: 'enum',
-      description: 'meal, custom, or cant_figure',
+      description:
+        'meal when distinct foods can be listed (default), custom only when the dish cannot be split, or cant_figure',
       enum: ['meal', 'custom', 'cant_figure'],
     },
     name: {
@@ -21,7 +22,7 @@ export const aiLogResponseSchema: ResponseSchema = {
     items: {
       type: SchemaType.ARRAY,
       description:
-        'Detected foods. One item for custom mode. Empty for cant_figure. Do not include oil here.',
+        'Detected foods. Two or more items means meal. One item means custom. Empty for cant_figure. Do not include oil here.',
       items: {
         type: SchemaType.OBJECT,
         properties: {

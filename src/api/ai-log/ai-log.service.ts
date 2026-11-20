@@ -104,13 +104,12 @@ export class AiLogService {
 
     const lines = []
     for (const item of gemini.items) {
-      let catalog
+      const catalog =
+        gemini.mode === 'meal'
+          ? await matchCatalog(item.name, input.userId)
+          : null
 
-      if (gemini.mode !== 'custom') {
-        catalog = await matchCatalog(item.name, input.userId)
-      }
-
-      if (catalog?.macros && gemini.mode !== 'custom') {
+      if (catalog?.macros) {
         lines.push({
           name: itemDisplayName(catalog.name) || item.name,
           gramsMin: item.gramsMin,
@@ -124,15 +123,16 @@ export class AiLogService {
           source: 'catalog',
           item: toClientItem(catalog),
         })
-      } else if (gemini.mode === 'custom') {
-        lines.push({
-          name: item.name,
-          gramsMin: item.gramsMin,
-          gramsMax: item.gramsMax,
-          per100g: per100g(item),
-          source: 'custom',
-        })
+        continue
       }
+
+      lines.push({
+        name: item.name,
+        gramsMin: item.gramsMin,
+        gramsMax: item.gramsMax,
+        per100g: per100g(item),
+        source: 'custom',
+      })
     }
 
     if (gemini.includeOil) {

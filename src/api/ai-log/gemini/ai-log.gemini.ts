@@ -97,43 +97,27 @@ function parseResult(raw: RawResult): AiLogGeminiResult {
   if (mode === 'cant_figure') {
     return { mode, name, includeOil: false, items: [] }
   }
-  if (mode === 'meal' && items.length < 2) {
-    return {
-      mode: 'custom',
-      name,
-      includeOil,
-      items: items.length
-        ? items
-        : [
-            {
-              name,
-              gramsMin: 200,
-              gramsMax: 400,
-              proteinPer100g: 10,
-              carbsPer100g: 20,
-              fatPer100g: 8,
-            },
-          ],
-    }
+  if (items.length >= 2) {
+    return { mode: 'meal', name, includeOil, items }
   }
-  if (!items.length) {
-    return {
-      mode: 'custom',
-      name,
-      includeOil,
-      items: [
-        {
-          name,
-          gramsMin: 150,
-          gramsMax: 350,
-          proteinPer100g: 10,
-          carbsPer100g: 20,
-          fatPer100g: 8,
-        },
-      ],
-    }
+  if (items.length === 1) {
+    return { mode: 'custom', name, includeOil, items }
   }
-  return { mode, name, includeOil, items }
+  return {
+    mode: 'custom',
+    name,
+    includeOil,
+    items: [
+      {
+        name,
+        gramsMin: 150,
+        gramsMax: 350,
+        proteinPer100g: 10,
+        carbsPer100g: 20,
+        fatPer100g: 8,
+      },
+    ],
+  }
 }
 
 export class AiLogGeminiService {

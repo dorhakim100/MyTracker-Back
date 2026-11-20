@@ -18,6 +18,8 @@ export class WorkoutController {
         limit?: number
       } = { forUserId }
 
+      logger.info('getWorkouts', filter)
+
       if (!isAll) {
         if (limit && !Number.isNaN(limit)) {
           filter.limit = limit

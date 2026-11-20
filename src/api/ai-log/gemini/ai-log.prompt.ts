@@ -5,10 +5,10 @@ export const getAiLogPrompt = (
 User text (may be empty, any language including Hebrew, English, mixed, or other — always try to understand it; NEVER treat non-English as unusable):
 """${text || '(no text)'}"""
 
-Decide mode:
+Decide mode. A meal is the default. custom is only the fallback when the dish cannot be split.
 - cant_figure: ONLY when the photo is unreadable/unusable AND the text is empty or nonsense (no food meaning in any language).
-- custom: no usable photo, OR the photo/text is an opaque combo (burrito, sandwich, wrap, "with chicken" with no visible parts), OR you cannot list distinct foods. One item = the whole dish.
-- meal: there IS a usable photo and you can see distinct foods with amounts.
+- meal: you can list distinct foods with amounts, from a photo, from text, or from both. A plate, a written list, or "chicken, rice, and broccoli" is a meal. Each food is its own item. No photo is required.
+- custom: you cannot list distinct foods. One item = the whole dish. Use this for an opaque combo (burrito, sandwich, wrap, "with chicken" with no parts) or a single food.
 
 Macros:
 - Always cooked / ready to eat. Never raw.
@@ -23,7 +23,6 @@ Oil:
 Rules:
 - Return JSON only matching the schema.
 - names: short catalog-style names a food database would use (chicken breast, white rice, broccoli, חזה עוף, אורז לבן). No restaurant adjectives.
-- Opaque dishes: custom, do not invent an ingredient list.
-- If only text is given, mode is custom (unless the text is useless then cant_figure).
-- If photo is bad but text describes food, mode is custom.
+- If the user lists foods in text (any language), mode is meal even with no photo or a bad photo.
+- A single food, or an opaque dish you cannot split, is custom. Do not invent an ingredient list for an opaque dish.
 `
