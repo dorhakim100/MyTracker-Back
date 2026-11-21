@@ -5,6 +5,7 @@ import { getDateFromISO } from '../../services/utils'
 import { InstructionsService } from '../instructions/instructions.service'
 import { SetService } from '../set/set.service'
 import { Set } from '@/types/Exercise/Set'
+import { setTypeOf } from '../set/set-type'
 import { WorkoutService } from '../workout/workout.service'
 
 export class SessionService {
@@ -399,7 +400,7 @@ export class SessionService {
           weight: set.weight,
           reps: set.reps,
           isDone: set.isDone,
-          type: set.type || 'normal',
+          type: setTypeOf(set),
           ...(set.restingTime != null ? { restingTime: set.restingTime } : {}),
           ...(set.isDuringWorkout ? { isDuringWorkout: true } : {}),
         }

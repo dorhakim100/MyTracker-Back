@@ -1,6 +1,7 @@
 import { Instructions, IInstructions } from './instructions.model'
 import { logger } from '../../services/logger.service'
 import { SessionService } from '../session/session.service'
+import { setTypeOf } from '../set/set-type'
 
 export class InstructionsService {
   static getEmptyInstructions(workoutId: string) {
@@ -136,6 +137,7 @@ export class InstructionsService {
         return {
           ...exercise,
           sets: exercise.sets.map((set) => {
+            const plannedType = setTypeOf(set, 'expected')
             const setData: any = {
               ...set,
               weight: {
@@ -147,6 +149,7 @@ export class InstructionsService {
                 actual: set.reps.expected,
               },
               isDone: false,
+              type: { expected: plannedType, actual: plannedType },
             }
 
             // Only include RPE or RIR if they have expected values, but not both

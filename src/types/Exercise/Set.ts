@@ -1,5 +1,7 @@
 import { ExpectedActual } from '../ExpectedActual/ExpectedActual'
 
+type SetTypeName = 'normal' | 'warmUp' | 'failure' | 'drop' | 'myoReps'
+
 export interface Set {
   weight: ExpectedActual<number>
   reps: ExpectedActual<number>
@@ -7,7 +9,7 @@ export interface Set {
   rir?: ExpectedActual<number>
   isDone: boolean
   isDuringWorkout?: boolean
-  type?: 'normal' | 'warmUp' | 'failure' | 'drop' | 'myoReps'
+  type?: SetTypeName | ExpectedActual<SetTypeName>
   restingTime?: number
 }
 
