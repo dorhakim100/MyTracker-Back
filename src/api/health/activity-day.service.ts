@@ -25,7 +25,7 @@ async function upsertDays(
     userId,
     date: { $in: days.map((day) => day.date) },
   })
-    .select('_id date vendor')
+    .select('_id date vendor steps calories')
     .lean()
 
   const byDate = new Map<string, typeof existing>()
@@ -57,15 +57,32 @@ async function upsertDays(
       ops.push({ deleteOne: { filter: { _id: row._id } } })
     }
 
+    const next = valuesToStore(vendor, keep, steps, calories)
+    if (!next) continue
+
     ops.push({
       updateOne: {
         filter: { _id: keep._id },
-        update: { $set: { vendor, steps, calories } },
+        update: { $set: { vendor, steps: next.steps, calories: next.calories } },
       },
     })
   }
 
   if (ops.length) await ActivityDay.bulkWrite(ops)
+}
+
+function valuesToStore(
+  vendor: ActivityVendor,
+  keep: { vendor: ActivityVendor; steps: number; calories: number },
+  steps: number,
+  calories: number
+) {
+  if (vendor !== 'google') return { steps, calories }
+
+  const nextSteps = steps > keep.steps ? steps : keep.steps
+  const nextCalories = calories > keep.calories ? calories : keep.calories
+  if (nextSteps === keep.steps && nextCalories === keep.calories) return null
+  return { steps: nextSteps, calories: nextCalories }
 }
 
 async function ensureActivityDayIndex() {

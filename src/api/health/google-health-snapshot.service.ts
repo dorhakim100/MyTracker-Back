@@ -104,20 +104,31 @@ export class GoogleHealthSnapshotService {
   ): Promise<{ snapshot: GoogleHealthSnapshotResponse; changed: boolean }> {
     const existing = await GoogleHealthSnapshot.findOne({ userId, date })
 
+    const steps =
+      existing && summary.steps <= existing.steps ? existing.steps : summary.steps
+    const activeCaloriesKcal =
+      existing && summary.activeCaloriesKcal <= existing.activeCaloriesKcal
+        ? existing.activeCaloriesKcal
+        : summary.activeCaloriesKcal
+
     const changed =
       !existing ||
-      existing.steps !== summary.steps ||
-      existing.activeCaloriesKcal !== summary.activeCaloriesKcal ||
+      existing.steps !== steps ||
+      existing.activeCaloriesKcal !== activeCaloriesKcal ||
       existing.distance !== summary.distance ||
       existing.flightsClimbed !== summary.flightsClimbed
+
+    if (existing && !changed) {
+      return { snapshot: toSnapshotResponse(existing), changed: false }
+    }
 
     const snapshotDoc = await GoogleHealthSnapshot.findOneAndUpdate(
       { userId, date },
       {
         userId,
         date,
-        steps: summary.steps,
-        activeCaloriesKcal: summary.activeCaloriesKcal,
+        steps,
+        activeCaloriesKcal,
         distance: summary.distance,
         flightsClimbed: summary.flightsClimbed,
         window: summary.window,
