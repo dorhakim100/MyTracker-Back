@@ -21,6 +21,12 @@ import { ActivityPageService } from '../health/activity-page.service'
 import type { ActivityVendor } from '../health/activity-day.model'
 import { getDateFromISO } from '../../services/utils'
 
+const streakTypes = {
+  steps: 'steps',
+  consumed: 'consumed',
+  burned: 'burned',
+} as const
+
 export class UserService {
   static async query(filterBy: { txt?: string; searchingUserId?: string }) {
     try {
@@ -335,9 +341,9 @@ export class UserService {
         details: normalizeUserDetails(user.details as UserDetailsFields),
         activeWorkoutsCount,
         streaks: {
-          steps: activityStreaks.steps,
-          consumed,
-          burned: activityStreaks.burned,
+          steps: { ...activityStreaks.steps, type: streakTypes.steps },
+          consumed: { ...consumed, type: streakTypes.consumed },
+          burned: { ...activityStreaks.burned, type: streakTypes.burned },
         },
       }
     } catch (err) {
