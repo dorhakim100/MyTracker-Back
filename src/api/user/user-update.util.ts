@@ -15,6 +15,7 @@ const CLIENT_FORBIDDEN_USER_FIELDS = new Set([
   'meals',
   'lastWeight',
   'activeWorkoutsCount',
+  'streaks',
 ])
 
 export function sanitizeUserUpdate(

@@ -2,6 +2,12 @@ import { Request, Response } from 'express'
 import { UserService } from './user.service'
 import { logger } from '../../services/logger.service'
 import { AuthService } from '../auth/auth.service'
+import type { ActivityVendor } from '../health/activity-day.model'
+
+function activityVendor(value: unknown): ActivityVendor | undefined {
+  if (value === 'google' || value === 'native') return value
+  return undefined
+}
 
 export class UserController {
   static async getUsers(req: Request, res: Response) {
@@ -18,7 +24,10 @@ export class UserController {
 
   static async rememberUser(req: Request, res: Response) {
     try {
-      const user = await UserService.getById(req.params.id)
+      const user = await UserService.getById(
+        req.params.id,
+        activityVendor(req.query.vendor)
+      )
       const loginToken = AuthService.getLoginToken(user)
       res.cookie('loginToken', loginToken, { sameSite: 'none', secure: true })
       res.json({ user, loginToken })
@@ -30,7 +39,10 @@ export class UserController {
 
   static async getUser(req: Request, res: Response) {
     try {
-      const user = await UserService.getById(req.params.id)
+      const user = await UserService.getById(
+        req.params.id,
+        activityVendor(req.query.vendor)
+      )
       res.json(user)
     } catch (err: any) {
       logger.error('Failed to get user', err)
@@ -40,7 +52,11 @@ export class UserController {
 
   static async updateUser(req: Request, res: Response) {
     try {
-      const user = await UserService.update(req.params.id, req.body)
+      const user = await UserService.update(
+        req.params.id,
+        req.body,
+        activityVendor(req.query.vendor)
+      )
       res.json(user)
     } catch (err: any) {
       logger.error('Failed to update user', err)

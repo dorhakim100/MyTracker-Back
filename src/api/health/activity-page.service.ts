@@ -47,8 +47,42 @@ type Row = {
   calories: number
 }
 
+export type StreakStat = {
+  count: number
+  countsToday: boolean
+}
+
 export const ActivityPageService = {
   getPage,
+  getLiveStreaks,
+}
+
+async function getLiveStreaks(userId: string, vendor: ActivityVendor) {
+  const today = todayKey()
+  const [stepsGoal, burnedGoal, history] = await Promise.all([
+    readGoal(userId, 'steps'),
+    readGoal(userId, 'calories'),
+    ActivityDayService.findInRange(userId, '1970-01-01', today),
+  ])
+
+  return {
+    steps: liveStreak(history, 'steps', vendor, stepsGoal, today),
+    burned: liveStreak(history, 'calories', vendor, burnedGoal, today),
+  }
+}
+
+function liveStreak(
+  history: Row[],
+  metric: ActivityMetric,
+  vendor: ActivityVendor,
+  goal: number,
+  today: string
+): StreakStat {
+  const todayValue = mergeValue(rowsFor(history, today), metric, vendor)
+  return {
+    count: countStreak(history, metric, vendor, goal, today, today),
+    countsToday: isHit(todayValue, goal),
+  }
 }
 
 async function getPage(

@@ -76,7 +76,28 @@ const FRAMES: IntakeFrame[] = ['week', 'month', 'quarter', 'year']
 
 export const IntakePageService = {
   getPage,
+  getLiveStreak,
   isFrame,
+}
+
+async function getLiveStreak(userId: string) {
+  const today = todayKey()
+  const [foodDays, goals] = await Promise.all([
+    Day.find({ userId, date: { $lte: today } })
+      .select('date calories logs')
+      .lean(),
+    GoalModel.find({ userId })
+      .select('dailyCalories target startDate endDate isSelected')
+      .lean(),
+  ])
+  const foodByDate = new Map(foodDays.map((day) => [day.date, day]))
+  const read = (date: string) =>
+    readDay(date, foodByDate, goals.flatMap(toSpan))
+
+  return {
+    count: countStreak(read, today, today),
+    countsToday: read(today).hit,
+  }
 }
 
 function isFrame(frame: string): frame is IntakeFrame {

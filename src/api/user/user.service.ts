@@ -16,6 +16,9 @@ import { WeightService } from '../weight/weight.service'
 import { TrainerRequestService } from '../trainer-request/trainer-request.service'
 import { WorkoutService } from '../workout/workout.service'
 import { DayService } from '../day/day.service'
+import { IntakePageService } from '../day/intake-page.service'
+import { ActivityPageService } from '../health/activity-page.service'
+import type { ActivityVendor } from '../health/activity-day.model'
 import { getDateFromISO } from '../../services/utils'
 
 export class UserService {
@@ -43,7 +46,7 @@ export class UserService {
     }
   }
 
-  static async getById(userId: string) {
+  static async getById(userId: string, vendor?: ActivityVendor) {
     try {
       const today = getDateFromISO(new Date().toISOString())
       await DayService.getByUserAndDate(userId, today)
@@ -320,10 +323,22 @@ export class UserService {
         await User.findByIdAndUpdate(countedUserId, { activeWorkoutsCount })
       }
 
+      const activityVendor: ActivityVendor =
+        vendor ?? (user.googleHealthConnectedAt ? 'google' : 'native')
+      const [activityStreaks, consumed] = await Promise.all([
+        ActivityPageService.getLiveStreaks(countedUserId, activityVendor),
+        IntakePageService.getLiveStreak(countedUserId),
+      ])
+
       return {
         ...user,
         details: normalizeUserDetails(user.details as UserDetailsFields),
         activeWorkoutsCount,
+        streaks: {
+          steps: activityStreaks.steps,
+          consumed,
+          burned: activityStreaks.burned,
+        },
       }
     } catch (err) {
       logger.error(`Failed to get user ${userId}`, err)
@@ -356,7 +371,11 @@ export class UserService {
     }
   }
 
-  static async update(userId: string, userToUpdate: Partial<IUser>) {
+  static async update(
+    userId: string,
+    userToUpdate: Partial<IUser>,
+    vendor?: ActivityVendor
+  ) {
     try {
       const sanitized = sanitizeUserUpdate(
         userToUpdate as unknown as Record<string, unknown>
@@ -376,7 +395,7 @@ export class UserService {
 
       await User.findByIdAndUpdate(userId, { $set: sanitized }, { new: true })
 
-      const aggregatedUser = await UserService.getById(userId)
+      const aggregatedUser = await UserService.getById(userId, vendor)
 
       return aggregatedUser
     } catch (err) {
