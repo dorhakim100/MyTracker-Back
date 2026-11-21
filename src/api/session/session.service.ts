@@ -399,11 +399,17 @@ export class SessionService {
           weight: set.weight,
           reps: set.reps,
           isDone: set.isDone,
+          type: set.type || 'normal',
+          ...(set.restingTime != null ? { restingTime: set.restingTime } : {}),
           ...(set.isDuringWorkout ? { isDuringWorkout: true } : {}),
         }
 
-        // Only include RPE or RIR if they have actual values, but not both
-        if (set.rir?.actual != null) {
+        const hasRir = set.rir?.actual != null
+        const hasRpe = set.rpe?.actual != null
+        if (hasRir && hasRpe) {
+          setData.rir = set.rir
+          setData.rpe = set.rpe
+        } else if (set.rir?.actual != null) {
           setData.rir = {
             expected: set.rir?.expected,
             actual: set.rir?.actual,

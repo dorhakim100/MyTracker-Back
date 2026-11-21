@@ -13,6 +13,7 @@ import {
   MuscleGroupId,
 } from './muscle-map'
 import { asId, sessionsForUser, workoutsByIds } from './stats.sessions'
+import { countsInVolume } from '../set/set-type'
 
 interface ExerciseRow {
   exerciseId: string
@@ -133,6 +134,7 @@ async function aggregate(
   const seen = new Set<string>()
 
   for (const set of sets) {
+    if (!countsInVolume(set)) continue
     const exercise = catalogById.get(set.exerciseId)
     if (!exercise) continue
     const hit = chartGroupsForExercise(exercise)

@@ -43,6 +43,11 @@ router.post(
   bodyUserIfSent,
   SetController.addSetBySessionIdAndExerciseIdAndSetIndex
 )
+router.delete(
+  '/session/:sessionId/exercise/:exerciseId',
+  ownSession,
+  SetController.deleteSetsBySessionIdAndExerciseId
+)
 router.put(
   '/session/:sessionId/exercise/:exerciseId/:setIndex',
   ownSession,
@@ -58,10 +63,5 @@ router.delete(
 router.put('/:id', ownSet, bodyUserIfSent, SetController.updateSet)
 router.delete('/:id', ownSet, SetController.deleteSet)
 router.delete('/session/:sessionId', ownSession, SetController.deleteSetsBySessionId)
-router.delete(
-  '/session/:sessionId/exercise/:exerciseId',
-  ownSession,
-  SetController.deleteSetsBySessionIdAndExerciseId
-)
 
 export const setRoutes = router

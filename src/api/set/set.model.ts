@@ -12,6 +12,8 @@ export interface ISet extends mongoose.Document {
   rir?: WorkingSet['rir']
   isDone: WorkingSet['isDone']
   isDuringWorkout?: WorkingSet['isDuringWorkout']
+  type?: WorkingSet['type']
+  restingTime?: number
 }
 
 const setSchema = new mongoose.Schema(
@@ -58,6 +60,14 @@ const setSchema = new mongoose.Schema(
     },
     isDuringWorkout: {
       type: Boolean,
+      required: false,
+    },
+    type: {
+      type: String,
+      required: false,
+    },
+    restingTime: {
+      type: Number,
       required: false,
     },
   },

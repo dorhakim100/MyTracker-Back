@@ -1,5 +1,6 @@
 import { ExerciseModel, IExercise } from './exercise.model'
 import { logger } from '../../services/logger.service'
+import { equipmentMatchValues } from './equipment-groups'
 import { Exercise } from '@/types/Exercise/Exercise'
 
 export class ExerciseService {
@@ -163,7 +164,15 @@ export class ExerciseService {
         filter.muscleGroups = { $in: [muscleGroupLower] }
       }
       if (equipment && equipment !== 'All') {
-        filter.equipments = { $in: [equipmentLower] }
+        const names = equipmentMatchValues(equipmentLower || '')
+        filter.$and = [
+          {
+            $or: [
+              { equipments: { $in: names } },
+              { equipment: { $in: names } },
+            ],
+          },
+        ]
       }
 
       const exercises = await ExerciseModel.find(filter)
@@ -345,11 +354,9 @@ export class ExerciseService {
    */
   static async searchByEquipment(equipment: string[]): Promise<IExercise[]> {
     try {
+      const names = equipment.flatMap((value) => equipmentMatchValues(value))
       const exercises = await ExerciseModel.find({
-        $or: [
-          { equipment: { $in: equipment } },
-          { equipments: { $in: equipment } },
-        ],
+        $or: [{ equipment: { $in: names } }, { equipments: { $in: names } }],
       })
       return exercises
     } catch (err) {

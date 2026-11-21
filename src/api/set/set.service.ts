@@ -3,6 +3,7 @@ import { logger } from '../../services/logger.service'
 import mongoose from 'mongoose'
 import { SetFilter } from '@/types/Exercise/Set'
 import { aggregateVolume } from './set.volume'
+import { countsInVolume } from './set-type'
 
 export class SetService {
   /**
@@ -19,7 +20,9 @@ export class SetService {
     // Check if RPE has an actual value (not null/undefined)
     const hasRpe = sanitized.rpe?.actual != null
 
-    if (hasRir) {
+    if (hasRir && hasRpe) {
+      return sanitized
+    } else if (hasRir) {
       // If RIR exists, remove RPE (set to undefined so it's not included)
       sanitized.rpe = undefined
     } else if (hasRpe) {
@@ -63,11 +66,13 @@ export class SetService {
       const sets = await query
       if (isVolume) {
         return aggregateVolume(
-          sets.map((set) => ({
-            createdAt: set.get('createdAt') as Date | undefined,
-            weight: set.weight,
-            reps: set.reps,
-          })),
+          sets
+            .filter((set) => countsInVolume(set))
+            .map((set) => ({
+              createdAt: set.get('createdAt') as Date | undefined,
+              weight: set.weight,
+              reps: set.reps,
+            })),
           calculation
         )
       }

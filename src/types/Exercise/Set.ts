@@ -7,6 +7,8 @@ export interface Set {
   rir?: ExpectedActual<number>
   isDone: boolean
   isDuringWorkout?: boolean
+  type?: 'normal' | 'warmUp' | 'failure' | 'drop' | 'myoReps'
+  restingTime?: number
 }
 
 export interface SetFilter {

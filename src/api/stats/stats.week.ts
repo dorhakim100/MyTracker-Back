@@ -2,6 +2,7 @@ import { ExerciseModel } from '../exercise/exercise.model'
 import { Instructions } from '../instructions/instructions.model'
 import { Set as SetModel } from '../set/set.model'
 import { Workout } from '../workout/workout.model'
+import { countsInVolume } from '../set/set-type'
 import {
   datesFor,
   israelToday,
@@ -83,7 +84,7 @@ async function recordsFor(
     userId: forUserId,
     exerciseId: { $in: exerciseIds },
     isDone: true,
-  }).select('exerciseId sessionId weight reps')
+  }).select('exerciseId sessionId weight reps type')
 
   const catalog = await ExerciseModel.find({
     exerciseId: { $in: exerciseIds },
@@ -96,6 +97,7 @@ async function recordsFor(
 
   const byExercise = new Map<string, typeof history>()
   for (const set of history) {
+    if (!countsInVolume(set)) continue
     const list = byExercise.get(set.exerciseId) || []
     list.push(set)
     byExercise.set(set.exerciseId, list)

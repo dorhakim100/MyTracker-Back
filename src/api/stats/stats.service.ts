@@ -10,6 +10,7 @@ import {
   SessionStatsExercise,
   SessionStatsRecap,
 } from './stats.types'
+import { countsInVolume, isCountingType, setTypeOf } from '../set/set-type'
 
 function setVolume(set: {
   weight?: { actual?: number }
@@ -154,15 +155,18 @@ export class StatsService {
         setNumber: 1,
       })
       const doneSets = sessionSets.filter((set) => set.isDone)
+      const volumeSets = doneSets.filter((set) => countsInVolume(set))
+      const countingSets = sessionSets.filter((set) =>
+        isCountingType(setTypeOf(set))
+      )
 
-      const volumeActual = doneSets.reduce(
+      const volumeActual = volumeSets.reduce(
         (sum, set) => sum + setVolume(set),
         0
       )
-      const volumePlanned = sessionSets.reduce(
-        (sum, set) => sum + setPlannedVolume(set),
-        0
-      )
+      const volumePlanned = sessionSets
+        .filter((set) => countsInVolume(set))
+        .reduce((sum, set) => sum + setPlannedVolume(set), 0)
 
       const workoutDoc = session.workoutId
         ? await WorkoutService.getById(session.workoutId)
@@ -201,7 +205,9 @@ export class StatsService {
           const exerciseSets = sessionSets.filter(
             (set) => set.exerciseId === exerciseId
           )
-          const exerciseDone = exerciseSets.filter((set) => set.isDone)
+          const exerciseDone = exerciseSets.filter(
+            (set) => set.isDone && countsInVolume(set)
+          )
           const workoutEx = workoutDoc?.exercises?.find(
             (exercise: { exerciseId: string; name?: string; image?: string }) =>
               exercise.exerciseId === exerciseId
@@ -238,18 +244,18 @@ export class StatsService {
         volumeActual
       )
 
-      const isAllSetsDone = sessionSets.every((set) => set.isDone)
+      const isAllSetsDone = countingSets.every((set) => set.isDone)
 
       return {
         startTime: startTime(stats),
         isFinished: Boolean(isAllSetsDone || instructions?.isFinished),
         durationMs: stats ? durationMs(stats) : 0,
-        actualRpe: average(doneSets.map(setActualRpe)),
+        actualRpe: average(volumeSets.map(setActualRpe)),
         accuracy: average(accuracyDoneSets.map(setAccuracy)),
         volumeActual,
         volumePlanned,
-        setsDone: doneSets.length,
-        setsPlanned: sessionSets.length,
+        setsDone: countingSets.filter((set) => set.isDone).length,
+        setsPlanned: countingSets.length,
         vsLastPercent,
         exercises,
       }
@@ -273,6 +279,7 @@ export class StatsService {
     })
 
     for (const set of history) {
+      if (!countsInVolume(set)) continue
       const list = map.get(set.exerciseId) || []
       list.push(set)
       map.set(set.exerciseId, list)
@@ -351,10 +358,9 @@ export class StatsService {
       sessionId: previous._id.toString(),
       isDone: true,
     })
-    const lastVolume = previousSets.reduce(
-      (sum, set) => sum + setVolume(set),
-      0
-    )
+    const lastVolume = previousSets
+      .filter((set) => countsInVolume(set))
+      .reduce((sum, set) => sum + setVolume(set), 0)
     if (!lastVolume) return null
     return (volumeActual / lastVolume) * 100
   }
