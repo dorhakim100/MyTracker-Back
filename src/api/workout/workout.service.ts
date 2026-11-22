@@ -305,29 +305,53 @@ export class WorkoutService {
   static instructionExercisesPipeline() {
     return [
       {
+        $addFields: {
+          workoutIdString: { $toString: '$_id' },
+        },
+      },
+      {
         $lookup: {
           from: 'instructions',
-          let: { workoutId: { $toString: '$_id' } },
+          localField: 'workoutIdString',
+          foreignField: 'workoutId',
           pipeline: [
-            {
-              $match: {
-                $expr: { $eq: ['$workoutId', '$$workoutId'] },
-              },
-            },
-            { $project: { _id: 0, exercises: 1 } },
+            { $project: { _id: 0, exerciseIds: '$exercises.exerciseId' } },
           ],
           as: 'instructionDocs',
         },
       },
       {
         $addFields: {
-          instructionExerciseIds: this.exerciseIdSet('$instructionDocs'),
+          instructionExerciseIds: {
+            $filter: {
+              input: {
+                $reduce: {
+                  input: { $ifNull: ['$instructionDocs', []] },
+                  initialValue: [],
+                  in: {
+                    $setUnion: [
+                      '$$value',
+                      { $ifNull: ['$$this.exerciseIds', []] },
+                    ],
+                  },
+                },
+              },
+              as: 'id',
+              cond: {
+                $and: [
+                  { $eq: [{ $type: '$$id' }, 'string'] },
+                  { $ne: ['$$id', ''] },
+                ],
+              },
+            },
+          },
         },
       },
       ...this.missingInstructionExercisesLookup(),
       {
         $project: {
           instructionDocs: 0,
+          workoutIdString: 0,
         },
       },
     ]
@@ -343,7 +367,7 @@ export class WorkoutService {
                 input: { $ifNull: [instructionsField, []] },
                 initialValue: [],
                 in: {
-                  $concatArrays: [
+                  $setUnion: [
                     '$$value',
                     {
                       $map: {

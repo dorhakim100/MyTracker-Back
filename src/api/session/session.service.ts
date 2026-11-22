@@ -7,6 +7,7 @@ import { SetService } from '../set/set.service'
 import { Set } from '@/types/Exercise/Set'
 import { setTypeOf } from '../set/set-type'
 import { WorkoutService } from '../workout/workout.service'
+import { ExerciseModel } from '../exercise/exercise.model'
 
 export class SessionService {
   private static getWorkoutLookupPipeline(includeInstructionExercises = false) {
@@ -157,17 +158,28 @@ export class SessionService {
         return null
       }
 
-      const sessiionToModify = await this.getById(sessionId)
-      if (!sessiionToModify) return null
+      const sessions = await Session.aggregate([
+        { $match: { _id: new mongoose.Types.ObjectId(sessionId) } },
+        ...this.getWorkoutLookupPipeline(false),
+        ...this.getCommonProjection(),
+      ])
+      const session = sessions[0]
+      if (!session) return null
 
-      const sessionToSend = {
-        ...sessiionToModify,
+      const instructionExercises = await this.missingInstructionExercises(
+        session.workout?.exercises,
+        instructions.exercises
+      )
+
+      return {
+        ...session,
+        workout: session.workout
+          ? { ...session.workout, instructionExercises }
+          : session.workout,
         instructions,
-      }
-
-      return (sessionToSend as unknown as ISession) || null
+      } as unknown as ISession
     } catch (err) {
-      logger.error(`SessionService.getById failed for ${sessionId}`, err)
+      logger.error(`SessionService.playWorkout failed for ${sessionId}`, err)
       throw err
     }
   }
@@ -378,6 +390,49 @@ export class SessionService {
       logger.error(`SessionService.remove failed for ${sessionId}`, err)
       throw err
     }
+  }
+
+  private static async missingInstructionExercises(
+    workoutExercises: { exerciseId?: string }[] | undefined,
+    instructionExercises: { exerciseId?: string }[] | undefined
+  ) {
+    const onWorkout = new Set(
+      (workoutExercises || [])
+        .map((exercise) => exercise.exerciseId)
+        .filter((id): id is string => Boolean(id))
+    )
+    const missingIds = [
+      ...new Set(
+        (instructionExercises || []).flatMap((exercise) => {
+          const id = exercise.exerciseId
+          if (!id || onWorkout.has(id)) return []
+          return [id]
+        })
+      ),
+    ]
+    if (missingIds.length === 0) return []
+
+    const found = await ExerciseModel.find({
+      exerciseId: { $in: missingIds },
+    })
+      .select(
+        'name image gifUrl exerciseId muscleGroups mainMuscles secondaryMuscles equipments equipment'
+      )
+      .lean()
+
+    return found.map((exercise) => ({
+      name: exercise.name,
+      image: exercise.image,
+      gifUrl: exercise.gifUrl,
+      exerciseId: exercise.exerciseId,
+      muscleGroups: exercise.muscleGroups,
+      mainMuscles: exercise.mainMuscles,
+      secondaryMuscles: exercise.secondaryMuscles,
+      equipments:
+        exercise.equipments && exercise.equipments.length > 0
+          ? exercise.equipments
+          : exercise.equipment || [],
+    }))
   }
 
   static async handleSetsCreation(
