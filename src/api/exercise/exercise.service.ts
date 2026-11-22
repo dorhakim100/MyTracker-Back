@@ -258,53 +258,104 @@ export class ExerciseService {
   /**
    * Get alternate exercises
    */
-  static async getAlternateExercises(exercise: Exercise): Promise<IExercise[]> {
+  static async getAlternateExercises(
+    exercise: Exercise,
+    options: {
+      skip?: number
+      limit?: number
+      equipment?: string
+      search?: string
+    } = {}
+  ): Promise<{ items: IExercise[]; nextSkip?: number }> {
+    const skip = Math.max(0, options.skip ?? 0)
+    const limit = Math.min(50, Math.max(1, options.limit ?? 10))
+
     try {
-      const backendExercise = await this.getByExerciseId(exercise.exerciseId)
+      const stored = await this.getByExerciseId(exercise.exerciseId)
+      const source = stored || exercise
+      const mainMuscles = (source.mainMuscles || []).filter(Boolean)
+      if (!mainMuscles.length) return { items: [] }
 
-      const normalizedExercise = backendExercise || exercise
-      const exercises = await ExerciseModel.find(
-        this._getAlternateExercisesFilter(normalizedExercise)
-      )
-        .sort({
-          popularityScore: -1,
+      const filter: Record<string, unknown> = {
+        mainMuscles: { $in: mainMuscles },
+        exerciseId: { $ne: exercise.exerciseId },
+      }
+      const equipment = options.equipment
+      if (equipment && equipment !== 'All') {
+        const names = equipmentMatchValues(equipment)
+        filter.$or = [
+          { equipments: { $in: names } },
+          { equipment: { $in: names } },
+        ]
+      }
+
+      const docs = await ExerciseModel.find(filter)
+        .select({
+          name: 1,
+          muscleGroups: 1,
+          image: 1,
+          gifUrl: 1,
+          equipments: 1,
+          equipment: 1,
+          exerciseId: 1,
+          mainMuscles: 1,
+          secondaryMuscles: 1,
+          popularityScore: 1,
         })
-        .select({ createdAt: 0, updatedAt: 0 })
+        .lean()
 
-      const sortedExercises = this.getSortedExercises(
-        exercises,
-        normalizedExercise
+      const queryWords = options.search ? this.textWords(options.search) : []
+      const matched = queryWords.length
+        ? docs.filter((doc) =>
+            queryWords.every((word) => doc.name.toLowerCase().includes(word))
+          )
+        : docs
+      const sourceTokens = this.textWords(
+        this.getExerciseNormalizedName(source.name)
       )
+      const ranked = matched
+        .map((doc) => ({
+          doc,
+          score: this.alternateRank(
+            doc.name,
+            sourceTokens,
+            doc.popularityScore || 0
+          ),
+        }))
+        .sort((a, b) => b.score - a.score)
+      const page = ranked.slice(skip, skip + limit)
 
-      return sortedExercises
+      return {
+        items: page.map((item) => item.doc) as IExercise[],
+        nextSkip: skip + limit < ranked.length ? skip + limit : undefined,
+      }
     } catch (err) {
       logger.error(`Failed to get alternate exercises ${exercise}`, err)
       throw err
     }
   }
 
-  private static getSortedExercises(
-    exercises: IExercise[],
-    exercise: Exercise
+  private static alternateRank(
+    name: string,
+    sourceTokens: string[],
+    popularity: number
   ) {
-    return exercises.sort((a, b) => {
-      return (
-        this.calculateRelevanceScore(b, exercise.name) -
-        this.calculateRelevanceScore(a, exercise.name)
-      )
-    })
+    const normalized = name.toLowerCase()
+    const hits = sourceTokens.filter((token) => normalized.includes(token)).length
+    const phrase =
+      sourceTokens.length > 0 &&
+      sourceTokens.every((token) => normalized.includes(token))
+        ? 1
+        : 0
+    return phrase * 10000 + hits * 1000 + popularity
   }
 
-  private static _getAlternateExercisesFilter(exercise: Exercise) {
-    const normalizedName = this.getExerciseNormalizedName(exercise.name)
-
-    return {
-      $and: [
-        { $text: { $search: normalizedName } },
-        { exerciseId: { $ne: exercise.exerciseId } },
-        // { muscleGroups: { $eq: exercise.muscleGroups } },
-      ],
-    }
+  private static textWords(value: string) {
+    return value
+      .toLowerCase()
+      .split(/[\s-]+/)
+      .map((word) => word.replace(/["\\]/g, '').trim())
+      .filter((word) => word.length > 1)
   }
 
   static getExerciseNormalizedName(name: string) {

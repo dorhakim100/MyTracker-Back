@@ -79,13 +79,19 @@ export class ExerciseController {
    */
   static async getAlternateExercises(req: Request, res: Response) {
     try {
-      const { exerciseToChange } = req.query
+      const { exerciseToChange, skip, limit, equipment, q } = req.query
 
       if (!exerciseToChange) {
         return res.status(400).send({ err: 'Exercise is required' })
       }
       const exercises = await ExerciseService.getAlternateExercises(
-        exerciseToChange as unknown as Exercise
+        exerciseToChange as unknown as Exercise,
+        {
+          skip: Number(skip) || 0,
+          limit: Number(limit) || 10,
+          equipment: typeof equipment === 'string' ? equipment : undefined,
+          search: typeof q === 'string' ? q : undefined,
+        }
       )
       res.json(exercises)
     } catch (err: any) {
