@@ -114,80 +114,93 @@ export class InstructionsService {
       throw err
     }
   }
-  static async getNextInstructionsByWorkoutIdAndUpdate(filter: {
-    workoutId: string
-    // forUserId: string
-  }) {
+  static async loadForPlay(workoutId: string) {
     try {
       const instruction = await Instructions.findOne({
-        ...filter,
+        workoutId,
         isDone: false,
-      })
+      }).lean()
 
-      if (!instruction) {
-        return null
+      if (!instruction) return null
+
+      const doneTimes = (instruction.doneTimes || 0) + 1
+      const isDone = doneTimes >= (instruction.timesPerWeek || 1)
+
+      return {
+        ...instruction,
+        doneTimes,
+        isDone,
+        isFinished: false,
+        exercises: this.playedExercises(instruction.exercises || []),
       }
-
-      const newDoneTimes = instruction.doneTimes + 1
-
-      const isDoneToSet =
-        newDoneTimes >= instruction.timesPerWeek ? true : false
-
-      const newExercises = instruction.exercises.map((exercise) => {
-        return {
-          ...exercise,
-          sets: exercise.sets.map((set) => {
-            const plannedType = setTypeOf(set, 'expected')
-            const setData: any = {
-              ...set,
-              weight: {
-                expected: set.weight.expected,
-                actual: set.weight.expected,
-              },
-              reps: {
-                expected: set.reps.expected,
-                actual: set.reps.expected,
-              },
-              isDone: false,
-              type: { expected: plannedType, actual: plannedType },
-            }
-
-            // Only include RPE or RIR if they have expected values, but not both
-            if (set.rir?.expected != null) {
-              setData.rir = {
-                expected: set.rir.expected,
-                actual: set.rir.expected,
-              }
-            } else if (set.rpe?.expected != null) {
-              setData.rpe = {
-                expected: set.rpe.expected,
-                actual: set.rpe.expected,
-              }
-            }
-
-            return setData
-          }),
-        }
-      })
-      const updatedInstruction = await Instructions.findByIdAndUpdate(
-        instruction._id,
-        {
-          doneTimes: newDoneTimes,
-          isDone: isDoneToSet,
-          exercises: newExercises,
-          isFinished: false,
-        },
-        { new: true }
-      )
-
-      return updatedInstruction
     } catch (err) {
-      logger.error(
-        `Failed to get instructions by workout id ${filter.workoutId}`,
-        err
-      )
+      logger.error(`Failed to load instructions for play ${workoutId}`, err)
       throw err
     }
+  }
+
+  static async markPlayed(instruction: {
+    _id: unknown
+    doneTimes: number
+    isDone: boolean
+  }) {
+    await Instructions.updateOne(
+      { _id: instruction._id },
+      {
+        doneTimes: instruction.doneTimes,
+        isDone: instruction.isDone,
+        isFinished: false,
+      }
+    )
+  }
+
+  static async savePlayedExercises(
+    instructionId: unknown,
+    exercises: { exerciseId?: string; sets?: unknown[] }[]
+  ) {
+    await Instructions.updateOne(
+      {
+        _id: instructionId,
+        exercises: { $not: { $elemMatch: { 'sets.isDone': true } } },
+      },
+      { exercises }
+    )
+  }
+
+  private static playedExercises(exercises: any[]) {
+    return exercises.map((exercise) => ({
+      ...exercise,
+      sets: (exercise.sets || []).map((set: any) => {
+        const plannedType = setTypeOf(set, 'expected')
+        const setData: any = {
+          ...set,
+          weight: {
+            expected: set.weight?.expected,
+            actual: set.weight?.expected,
+          },
+          reps: {
+            expected: set.reps?.expected,
+            actual: set.reps?.expected,
+          },
+          isDone: false,
+          type: { expected: plannedType, actual: plannedType },
+        }
+
+        if (set.rir?.expected != null) {
+          setData.rir = {
+            expected: set.rir.expected,
+            actual: set.rir.expected,
+          }
+        } else if (set.rpe?.expected != null) {
+          setData.rpe = {
+            expected: set.rpe.expected,
+            actual: set.rpe.expected,
+          }
+        }
+
+        return setData
+      }),
+    }))
   }
   static async getNextInstructionsByWorkoutId(filter: {
     workoutId: string

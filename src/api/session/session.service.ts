@@ -7,6 +7,7 @@ import { SetService } from '../set/set.service'
 import { Set } from '@/types/Exercise/Set'
 import { setTypeOf } from '../set/set-type'
 import { WorkoutService } from '../workout/workout.service'
+import { Workout } from '../workout/workout.model'
 import { ExerciseModel } from '../exercise/exercise.model'
 
 export class SessionService {
@@ -129,53 +130,34 @@ export class SessionService {
     userId: string
   ): Promise<ISession | null> {
     try {
-      const instructions =
-        await InstructionsService.getNextInstructionsByWorkoutIdAndUpdate({
-          workoutId,
-        })
-
+      const instructions = await InstructionsService.loadForPlay(workoutId)
       if (!instructions) return null
 
-      // Fire and forget - sets creation can take time, don't block the response
-      this.handleSetsCreation(instructions.exercises, sessionId, userId).catch(
-        (err) => {
-          logger.error(
-            `Failed to create sets in background for session ${sessionId}`,
-            err
-          )
-        }
-      )
-
-      const instructionsId = instructions?._id
-
-      const updatedSession = await Session.findByIdAndUpdate(
-        sessionId,
-        { workoutId, instructionsId },
-        { new: true }
-      )
-
-      if (!updatedSession) {
-        return null
-      }
-
-      const sessions = await Session.aggregate([
-        { $match: { _id: new mongoose.Types.ObjectId(sessionId) } },
-        ...this.getWorkoutLookupPipeline(false),
-        ...this.getCommonProjection(),
+      const instructionsId = String(instructions._id)
+      const [workout, session] = await Promise.all([
+        Workout.findById(workoutId).lean(),
+        Session.findByIdAndUpdate(
+          sessionId,
+          { workoutId, instructionsId },
+          { new: true }
+        ).lean(),
+        InstructionsService.markPlayed(instructions),
       ])
-      const session = sessions[0]
+
       if (!session) return null
 
       const instructionExercises = await this.missingInstructionExercises(
-        session.workout?.exercises,
+        workout?.exercises,
         instructions.exercises
       )
 
+      this.finishPlay(instructions, sessionId, userId)
+
       return {
         ...session,
-        workout: session.workout
-          ? { ...session.workout, instructionExercises }
-          : session.workout,
+        workout: workout
+          ? { ...workout, instructionExercises }
+          : workout,
         instructions,
       } as unknown as ISession
     } catch (err) {
@@ -390,6 +372,33 @@ export class SessionService {
       logger.error(`SessionService.remove failed for ${sessionId}`, err)
       throw err
     }
+  }
+
+  private static finishPlay(
+    instructions: {
+      _id: unknown
+      exercises: { exerciseId: string; sets: Set[] }[]
+    },
+    sessionId: string,
+    userId: string
+  ) {
+    InstructionsService.savePlayedExercises(
+      instructions._id,
+      instructions.exercises
+    ).catch((err) => {
+      logger.error(
+        `Failed to save played instructions ${instructions._id}`,
+        err
+      )
+    })
+    this.handleSetsCreation(instructions.exercises, sessionId, userId).catch(
+      (err) => {
+        logger.error(
+          `Failed to create sets in background for session ${sessionId}`,
+          err
+        )
+      }
+    )
   }
 
   private static async missingInstructionExercises(
