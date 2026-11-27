@@ -206,7 +206,6 @@ export class ItemService {
     const query: Record<string, unknown> = {
       categories: { $in: related.categories },
     }
-    if (excluded.size) query._id = { $nin: [...excluded] }
 
     const pattern = related.terms.length
       ? relatedTermsPattern(related.terms)
