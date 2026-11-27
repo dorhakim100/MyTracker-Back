@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { WeightService } from './weight.service'
 import { logger } from '../../services/logger.service'
+import { isChartRange } from '../../utils/chart-series.util'
 
 function readPageCount(value: string | undefined) {
   if (!value) return undefined
@@ -35,6 +36,20 @@ export class WeightController {
     } catch (err: any) {
       logger.error('Failed to get weights', err)
       res.status(500).send({ err: 'Failed to get weights' })
+    }
+  }
+
+  static async getChart(req: Request, res: Response) {
+    try {
+      const { userId, range } = req.query as { userId: string; range?: string }
+      if (!isChartRange(range)) {
+        return res.status(400).send({ err: 'Invalid chart range' })
+      }
+      const chart = await WeightService.getChart(userId, range)
+      res.json(chart)
+    } catch (err: any) {
+      logger.error('Failed to get weight chart', err)
+      res.status(500).send({ err: 'Failed to get weight chart' })
     }
   }
 

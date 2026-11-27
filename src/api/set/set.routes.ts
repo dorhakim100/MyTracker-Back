@@ -27,6 +27,7 @@ const saveMany = requireListAccess({
 })
 
 router.get('/', queryUser, SetController.getSets)
+router.get('/chart', queryUser, SetController.getChart)
 router.get('/session/:sessionId', ownSession, SetController.getSetsBySessionId)
 router.get(
   '/session/:sessionId/exercise/:exerciseId',

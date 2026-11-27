@@ -1,6 +1,8 @@
 import { Weight, IWeight } from './weight.model'
 import { logger } from '../../services/logger.service'
 import { CloudinaryMediaService } from '../../services/cloudinary/cloudinary.service'
+import { ChartRange } from '../../utils/chart-series.util'
+import { buildWeightChart, weightChartFetchFrom } from './weight.chart'
 
 const MEASURE_FIELDS = [
   'kg',
@@ -95,6 +97,26 @@ export class WeightService {
       return weightsQuery
     } catch (err) {
       logger.error(`WeightService.listByUser failed for ${userId}`, err)
+      throw err
+    }
+  }
+
+  static async getChart(userId: string, range: ChartRange) {
+    try {
+      const weights = await Weight.find({
+        userId,
+        createdAt: { $gte: weightChartFetchFrom(range), $lte: Date.now() },
+        kg: { $type: 'number' },
+      })
+        .select({ createdAt: 1, kg: 1 })
+        .lean()
+
+      return buildWeightChart(
+        weights.map((weight) => ({ createdAt: weight.createdAt, kg: weight.kg! })),
+        range
+      )
+    } catch (err) {
+      logger.error(`WeightService.getChart failed for ${userId}`, err)
       throw err
     }
   }

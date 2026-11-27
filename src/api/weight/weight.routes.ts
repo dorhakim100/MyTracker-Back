@@ -17,6 +17,7 @@ const bodyUser = requireUserAccess([
 const ownWeight = requireDocAccess(Weight, 'userId')
 
 router.get('/', queryUser, WeightController.getWeightsByUser)
+router.get('/chart', queryUser, WeightController.getChart)
 router.get('/:id', ownWeight, WeightController.getWeightById)
 router.post('/', bodyUser, WeightController.add)
 router.put('/:id', ownWeight, requireUserAccess([{ from: 'body', name: 'userId' }]), WeightController.update)

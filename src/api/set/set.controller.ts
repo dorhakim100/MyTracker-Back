@@ -1,6 +1,8 @@
 import { Request, Response } from 'express'
 import { SetService } from './set.service'
 import { logger } from '../../services/logger.service'
+import { isChartRange } from '../../utils/chart-series.util'
+import { isSetChartViewBy } from './set.chart'
 
 export class SetController {
   static async getSets(req: Request, res: Response) {
@@ -10,6 +12,25 @@ export class SetController {
     } catch (err: any) {
       logger.error('Failed to get sets', err)
       res.status(500).send({ err: 'Failed to get sets' })
+    }
+  }
+
+  static async getChart(req: Request, res: Response) {
+    try {
+      const { userId, exerciseId, range, viewBy } = req.query as {
+        userId: string
+        exerciseId?: string
+        range?: string
+        viewBy?: string
+      }
+      if (!exerciseId || !isChartRange(range) || !isSetChartViewBy(viewBy)) {
+        return res.status(400).send({ err: 'Invalid chart query' })
+      }
+      const chart = await SetService.getChart(userId, exerciseId, range, viewBy)
+      res.json(chart)
+    } catch (err: any) {
+      logger.error('Failed to get set chart', err)
+      res.status(500).send({ err: 'Failed to get set chart' })
     }
   }
 

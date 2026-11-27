@@ -4,6 +4,8 @@ import mongoose from 'mongoose'
 import { SetFilter } from '@/types/Exercise/Set'
 import { aggregateVolume } from './set.volume'
 import { countsInVolume } from './set-type'
+import { buildSetChart, SetChartViewBy } from './set.chart'
+import { ChartRange, daysAgo, rangeDayCount } from '../../utils/chart-series.util'
 
 export class SetService {
   /**
@@ -79,6 +81,32 @@ export class SetService {
       return sets
     } catch (err) {
       logger.error('Failed to query sets', err)
+      throw err
+    }
+  }
+
+  static async getChart(
+    userId: string,
+    exerciseId: string,
+    range: ChartRange,
+    viewBy: SetChartViewBy
+  ) {
+    try {
+      const count = rangeDayCount(range)
+      const from = count ? daysAgo(count) : new Date(0)
+      const sets = await Set.find({
+        userId,
+        exerciseId,
+        isDone: true,
+        createdAt: { $gte: from },
+      })
+        .select({ createdAt: 1, weight: 1, reps: 1, type: 1 })
+        .sort({ createdAt: -1, setNumber: 1 })
+        .lean()
+
+      return buildSetChart(sets.filter((set) => countsInVolume(set)), range, viewBy)
+    } catch (err) {
+      logger.error('Failed to get set chart', err)
       throw err
     }
   }
