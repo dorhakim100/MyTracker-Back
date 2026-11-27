@@ -672,6 +672,8 @@ const RULES: CategoryRule[] = [
       'bread',
       'bagel',
       'pita',
+      'bun',
+      'roll',
       'tortilla',
       'wrap',
       'oats',
@@ -704,6 +706,61 @@ const RULES: CategoryRule[] = [
       'פריכיות',
     ],
   },
+]
+
+// Sibling foods inside a broad category. Searching a bun should surface other
+// breads, not every carb.
+const FOOD_FAMILIES: string[][] = [
+  [
+    'bread',
+    'bagel',
+    'pita',
+    'bun',
+    'baguette',
+    'toast',
+    'tortilla',
+    'wrap',
+    'לחם',
+    'פיתה',
+    'בייגל',
+    'לחמניה',
+    'בגט',
+    'טוסט',
+    'טורטיה',
+    'פריכיות',
+  ],
+  ['rice', 'אורז'],
+  ['pasta', 'spaghetti', 'noodles', 'פסטה', 'ספגטי', 'נודלס'],
+  ['potato', 'fries', 'פירה', 'תפוח אדמה'],
+  [
+    'oatmeal',
+    'oats',
+    'quinoa',
+    'couscous',
+    'bulgur',
+    'barley',
+    'buckwheat',
+    'שיבולת',
+    'קוואקר',
+    'קינואה',
+    'קוסקוס',
+    'כוסמת',
+    'פתיתים',
+  ],
+  ['chicken', 'turkey', 'עוף', 'הודו', 'שניצל'],
+  ['beef', 'steak', 'בקר', 'בשר', 'אנטריקוט', 'אסאדו'],
+  [
+    'salmon',
+    'tuna',
+    'fish',
+    'cod',
+    'shrimp',
+    'דג',
+    'סלמון',
+    'טונה',
+    'אמנון',
+  ],
+  ['egg', 'ביצה', 'ביצים'],
 ]
 
 function normalize(value: string) {
@@ -783,4 +840,94 @@ export function normalizeCategories(value: unknown): ItemCategoryId[] {
     if (!next.includes(entry)) next.push(entry)
   }
   return next
+}
+
+export function normalizeFoodQuery(value: string) {
+  return normalize(value)
+}
+
+let cachedFoodKeywords: Set<string> | null = null
+
+export function foodKeywordSet(): Set<string> {
+  if (cachedFoodKeywords) return cachedFoodKeywords
+  const next = new Set<string>()
+  const add = (value: string) => {
+    const normalized = normalize(value)
+    if (normalized) next.add(normalized)
+  }
+  for (const rule of RULES) {
+    rule.keywords.forEach(add)
+  }
+  for (const labels of Object.values(ITEM_CATEGORY_LABELS)) {
+    add(labels.eng)
+    add(labels.he)
+    labels.aliases.forEach(add)
+  }
+  cachedFoodKeywords = next
+  return next
+}
+
+export function categoryIdForLabel(term: string): ItemCategoryId | null {
+  const query = normalize(term)
+  if (!query) return null
+  for (const id of ITEM_CATEGORY_IDS) {
+    const labels = ITEM_CATEGORY_LABELS[id]
+    const candidates = [id, labels.eng, labels.he, ...labels.aliases].map(
+      normalize
+    )
+    if (candidates.includes(query)) return id
+  }
+  return null
+}
+
+function matchingFoodKeywords(haystack: string) {
+  const hits: { keyword: string; category: ItemCategoryId }[] = []
+  for (const rule of RULES) {
+    for (const keyword of rule.keywords) {
+      if (!includesTerm(haystack, keyword)) continue
+      hits.push({ keyword: normalize(keyword), category: rule.category })
+    }
+  }
+  return hits.filter(
+    (hit) =>
+      !hits.some(
+        (other) =>
+          other.keyword.length > hit.keyword.length &&
+          other.keyword.includes(hit.keyword)
+      )
+  )
+}
+
+export function relatedFoodSearch(texts: string[]): {
+  categories: ItemCategoryId[]
+  terms: string[]
+} {
+  const haystack = normalize(texts.filter(Boolean).join(' '))
+  if (!haystack) return { categories: [], terms: [] }
+
+  const hits = matchingFoodKeywords(haystack)
+  const categories: ItemCategoryId[] = []
+  for (const hit of hits) {
+    if (!categories.includes(hit.category)) categories.push(hit.category)
+  }
+
+  if (!categories.length) {
+    for (const text of texts) {
+      const label = categoryIdForLabel(text)
+      if (label && !categories.includes(label)) categories.push(label)
+    }
+  }
+
+  const hitKeywords = new Set(hits.map((hit) => hit.keyword))
+  const terms: string[] = []
+  for (const family of FOOD_FAMILIES) {
+    const matched = family.some((term) => hitKeywords.has(normalize(term)))
+    if (!matched) continue
+    for (const term of family) {
+      const normalized = normalize(term)
+      if (normalized && !terms.includes(normalized)) terms.push(normalized)
+    }
+  }
+
+  return { categories, terms }
 }

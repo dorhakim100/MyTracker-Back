@@ -4,7 +4,20 @@ import { Item } from '@/types/Item/Item'
 import { MealService } from '../meal/meal.service'
 import { readableUserIds } from '../../services/user-access.service'
 import { ItemName, LocalizedName } from '@/types/Item/LocalizedName'
-import { isItemCategoryId, normalizeCategories } from './item-categories'
+import {
+  categoryIdForLabel,
+  isItemCategoryId,
+  normalizeCategories,
+  normalizeFoodQuery,
+  relatedFoodSearch,
+} from './item-categories'
+import {
+  getSearchVariants,
+  relatedTermsPattern,
+  searchTermPattern,
+} from './item-search'
+
+export type ItemSearchMatch = 'direct' | 'similar'
 
 export class ItemService {
   /**
@@ -39,16 +52,22 @@ export class ItemService {
    */
 
   private static normalizeSearchTerm(term: string): string {
-    if (!term) return ''
+    return normalizeFoodQuery(term)
+  }
 
-    return term
-      .toLowerCase()
-      .normalize('NFKD')
-      .replace(/[\u0591-\u05C7]/g, '') // Hebrew nikud
-      .replace(/[\u0300-\u036f]/g, '') // general combining marks
-      .replace(/[״׳'"]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim()
+  private static termRegex(pattern: string) {
+    return { $regex: pattern, $options: 'i' as const }
+  }
+
+  private static nameMatchClauses(pattern: string) {
+    return [
+      { 'name.eng': this.termRegex(pattern) },
+      { 'name.he': this.termRegex(pattern) },
+      { 'name.default': this.termRegex(pattern) },
+      { name: this.termRegex(pattern) },
+      { searchTerms: this.termRegex(pattern) },
+      { searchTerm: this.termRegex(pattern) },
+    ]
   }
 
   private static escapeRegex(term: string): string {
@@ -97,56 +116,124 @@ export class ItemService {
   static async getBySearchTerm(
     searchTerm: string,
     userId?: string
-  ): Promise<IItem[]> {
+  ): Promise<Array<IItem & { matchType: ItemSearchMatch }>> {
     try {
       const normalizedTerm = this.normalizeSearchTerm(searchTerm)
       if (!normalizedTerm) return []
 
-      const allVariants = [
-        ...new Set(
-          [normalizedTerm, ...this.getSearchVariants(normalizedTerm)].map(
-            (term) => this.normalizeSearchTerm(term)
-          )
-        ),
-      ].filter(Boolean)
+      const variants = getSearchVariants(normalizedTerm)
+      const pattern = variants.map((term) => this.escapeRegex(term)).join('|')
+      if (!pattern) return []
 
-      const escapedVariants = allVariants.map((term) => this.escapeRegex(term))
-
-      const items = await ItemModel.find(
-        this.withVisibility(
-          {
-            $or: escapedVariants.flatMap((term) => [
-              { 'name.eng': { $regex: term, $options: 'i' } },
-              { 'name.he': { $regex: term, $options: 'i' } },
-              { 'name.default': { $regex: term, $options: 'i' } },
-              { name: { $regex: term, $options: 'i' } },
-              { searchTerms: { $regex: term, $options: 'i' } },
-              { searchTerm: { $regex: term, $options: 'i' } },
-            ]),
-          },
-          userId
+      const nameClauses = [
+        { 'name.eng': this.termRegex(pattern) },
+        { 'name.he': this.termRegex(pattern) },
+        { 'name.default': this.termRegex(pattern) },
+        { name: this.termRegex(pattern) },
+      ]
+      const byPopularity = { popularity: -1 as const, _id: 1 as const }
+      const [named, broad] = await Promise.all([
+        ItemModel.find(this.withVisibility({ $or: nameClauses }, userId))
+          .sort(byPopularity)
+          .limit(40)
+          .lean(),
+        ItemModel.find(
+          this.withVisibility({ $or: this.nameMatchClauses(pattern) }, userId)
         )
-      )
-        .sort({ popularity: -1, _id: 1 })
-        .limit(40)
-        .lean()
+          .sort(byPopularity)
+          .limit(40)
+          .lean(),
+      ])
+      const seen = new Set<string>()
+      const items = [...named, ...broad].filter((item) => {
+        const id = String(item._id)
+        if (seen.has(id)) return false
+        seen.add(id)
+        return true
+      })
 
       const meals = userId
         ? ((await MealService.query({
-            name: {
-              $regex: this.escapeRegex(normalizedTerm),
-              $options: 'i',
-            },
+            name: this.termRegex(pattern),
             createdBy: { $in: await readableUserIds(userId) },
           })) as unknown as IItem[])
         : []
 
-      const ranked = this.rankSearchResults(items as IItem[], allVariants)
-      return [...ranked, ...meals]
+      const ranked = this.rankSearchResults(items as IItem[], variants).slice(0, 40)
+      const direct = [
+        ...ranked.map((item) => this.asSearchHit(item, 'direct')),
+        ...meals.map((item) => this.asSearchHit(item, 'direct')),
+      ]
+      if (!direct.length || categoryIdForLabel(normalizedTerm)) return direct
+
+      const related = relatedFoodSearch(variants)
+      if (!related.categories.length) return direct
+
+      const excludeIds = direct
+        .map((item) => item._id)
+        .filter((id) => id != null)
+        .map((id) => String(id))
+      const similar = await this.findSimilarItems(related, excludeIds, userId)
+      return [
+        ...direct,
+        ...similar.map((item) => this.asSearchHit(item, 'similar')),
+      ] as Array<IItem & { matchType: ItemSearchMatch }>
     } catch (err) {
       logger.error(`Failed to get items by search term ${searchTerm}`, err)
       throw err
     }
+  }
+
+  private static asSearchHit<T extends object>(
+    item: T,
+    matchType: ItemSearchMatch
+  ) {
+    const source =
+      typeof (item as { toObject?: () => T }).toObject === 'function'
+        ? (item as { toObject: () => T }).toObject()
+        : item
+    return { ...source, matchType }
+  }
+
+  private static async findSimilarItems(
+    related: ReturnType<typeof relatedFoodSearch>,
+    excludeIds: unknown[],
+    userId?: string
+  ) {
+    const limit = 8
+    const sort = { isCurated: -1 as const, popularity: -1 as const, _id: 1 as const }
+    const excluded = new Set(excludeIds.map((id) => String(id)))
+    const query: Record<string, unknown> = {
+      categories: { $in: related.categories },
+    }
+    if (excluded.size) query._id = { $nin: [...excluded] }
+
+    const pattern = related.terms.length
+      ? relatedTermsPattern(related.terms)
+      : ''
+    if (pattern) query.$or = this.nameMatchClauses(pattern)
+
+    const items = await ItemModel.find(this.withVisibility(query, userId))
+      .sort(sort)
+      .limit(limit + excluded.size)
+      .lean()
+
+    return items
+      .filter((item) => !excluded.has(String(item._id)))
+      .slice(0, limit)
+  }
+
+  private static matchRank(
+    values: string[],
+    variants: string[],
+    variantSet: Set<string>
+  ) {
+    if (values.some((value) => variantSet.has(value))) return 100
+    if (values.some((value) => variants.some((variant) => value.startsWith(variant))))
+      return 80
+    if (values.some((value) => variants.some((variant) => value.includes(variant))))
+      return 50
+    return 0
   }
 
   private static rankSearchResults(items: IItem[], variants: string[]) {
@@ -156,16 +243,13 @@ export class ItemService {
       const names = this.getNameStrings(item).map((name) =>
         this.normalizeSearchTerm(name)
       )
-      const terms = (item.searchTerms || []).map((term) =>
-        this.normalizeSearchTerm(term)
-      )
-      const haystack = [...names, ...terms]
-
-      if (haystack.some((value) => variantSet.has(value))) return 100
-      if (haystack.some((value) => variants.some((v) => value.startsWith(v))))
-        return 80
-      if (haystack.some((value) => variants.some((v) => value.includes(v))))
-        return 50
+      const terms = [item.searchTerm, ...(item.searchTerms || [])]
+        .filter((term): term is string => Boolean(term))
+        .map((term) => this.normalizeSearchTerm(term))
+      const nameRank = this.matchRank(names, variants, variantSet)
+      if (nameRank) return nameRank
+      const termRank = this.matchRank(terms, variants, variantSet)
+      if (termRank) return termRank - 10
       return 10
     }
 
@@ -174,49 +258,6 @@ export class ItemService {
       if (rankDiff !== 0) return rankDiff
       return (b.popularity || 0) - (a.popularity || 0)
     })
-  }
-
-  private static getSearchVariants(term: string): string[] {
-    const normalized = this.normalizeSearchTerm(term).toLowerCase().trim()
-
-    const variants = new Set<string>()
-    variants.add(normalized)
-
-    const words = normalized.split(/\s+/)
-    const lastWord = words[words.length - 1]
-
-    if (!lastWord) return [...variants]
-
-    // eggs -> egg
-    if (lastWord.endsWith('s') && lastWord.length > 3) {
-      variants.add([...words.slice(0, -1), lastWord.slice(0, -1)].join(' '))
-    }
-
-    // egg -> eggs
-    if (!lastWord.endsWith('s')) {
-      variants.add([...words.slice(0, -1), `${lastWord}s`].join(' '))
-    }
-
-    // tomatoes -> tomato
-    if (lastWord.endsWith('es') && lastWord.length > 4) {
-      variants.add([...words.slice(0, -1), lastWord.slice(0, -2)].join(' '))
-    }
-
-    // berry -> berries
-    if (lastWord.endsWith('y') && lastWord.length > 3) {
-      variants.add(
-        [...words.slice(0, -1), `${lastWord.slice(0, -1)}ies`].join(' ')
-      )
-    }
-
-    // berries -> berry
-    if (lastWord.endsWith('ies') && lastWord.length > 4) {
-      variants.add(
-        [...words.slice(0, -1), `${lastWord.slice(0, -3)}y`].join(' ')
-      )
-    }
-
-    return [...variants].filter(Boolean)
   }
 
   /**
@@ -521,15 +562,17 @@ export class ItemService {
     }
 
     if (filter.q) {
-      const term = this.escapeRegex(this.normalizeSearchTerm(filter.q))
-      query.$or = [
-        { 'name.eng': { $regex: term, $options: 'i' } },
-        { 'name.he': { $regex: term, $options: 'i' } },
-        { 'name.default': { $regex: term, $options: 'i' } },
-        { name: { $regex: term, $options: 'i' } },
-        { searchTerms: { $regex: term, $options: 'i' } },
-        { searchId: { $regex: term, $options: 'i' } },
-      ]
+      const pattern = searchTermPattern(filter.q)
+      if (pattern) {
+        query.$or = [
+          ...this.nameMatchClauses(pattern),
+          {
+            searchId: this.termRegex(
+              this.escapeRegex(this.normalizeSearchTerm(filter.q))
+            ),
+          },
+        ]
+      }
     }
 
     const [items, total] = await Promise.all([
@@ -633,14 +676,8 @@ export class ItemService {
     const query: Record<string, unknown> = { categories: filter.category }
 
     if (filter.txt) {
-      const term = this.escapeRegex(this.normalizeSearchTerm(filter.txt))
-      query.$or = [
-        { 'name.eng': { $regex: term, $options: 'i' } },
-        { 'name.he': { $regex: term, $options: 'i' } },
-        { 'name.default': { $regex: term, $options: 'i' } },
-        { name: { $regex: term, $options: 'i' } },
-        { searchTerms: { $regex: term, $options: 'i' } },
-      ]
+      const pattern = searchTermPattern(filter.txt)
+      if (pattern) query.$or = this.nameMatchClauses(pattern)
     }
 
     const visibleQuery = this.withVisibility(query, userId)
