@@ -59,13 +59,22 @@ function movingAverageOf(
 ) {
   const combined = [...previous, ...data]
 
-  return data.map((_, index) => {
-    const period = combined.slice(index, index + MOVING_AVERAGE_DAYS)
+  return data.map((kg, index) => {
+    const period =
+      kg == null
+        ? combined.slice(index, index + MOVING_AVERAGE_DAYS)
+        : windowEndingAt(combined, previous.length + index)
     const isFull = period.length === MOVING_AVERAGE_DAYS && !period.includes(null)
     if (isFull) return periodAverage(period)
     if (isAll) return null
     return periodAverage(fillMissing(period))
   })
+}
+
+// A logged day closes its 7-day window. A day with no weight keeps the 7 days before it.
+function windowEndingAt(combined: (number | null)[], dayIndex: number) {
+  const start = dayIndex - (MOVING_AVERAGE_DAYS - 1)
+  return combined.slice(Math.max(start, 0), start + MOVING_AVERAGE_DAYS)
 }
 
 function periodAverage(period: (number | null)[] | null) {
